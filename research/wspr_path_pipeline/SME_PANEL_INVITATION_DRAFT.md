@@ -84,7 +84,17 @@ Variables in the ledger report (draft):
    b. Propagation rules
    c. Option - Directional Antennas
 
-   
+## Model Fitting and Validation
+The script uses regression (data-driven optimization) as the primary method for determining the coefficients (weights) for the path score variables. The function model_matrix() builds a matrix of features (variables) and the observed direction scores. The function fit_wls() (weighted least squares) is used to fit the model, finding the optimal coefficients (betas) for each variable to best match the observed data.
+
+This is a form of regression, and the script also includes an r2_score() function to compute the coefficient of determination (figure of merit). Ideally, we are looking for an r2_score() figure of merit of at least 0.7. The figure will improve as we get feedback from reviewers.
+
+Reviewers can adjust the calculated coefficients to better reflect their own environment or region. This flexibility allows for practical adaptation and helps inform future model refinements, especially for different latitudes or seasonal conditions. Feedback from reviewer adjustments is encouraged and will be used to improve the regression model.
+
+The script also supports fixed theoretical weights (e.g., 0.70, 0.20, 0.10) for transparency and historical comparison, but these are not the recommended standard for all regions.
+
+Note: Consistency over time (e.g., through seasons) is a possible future variable for confidence, pending sufficient data.
+
 ## Draft Review Questions
 
 1. Are any assumptions misleading or too broad?
