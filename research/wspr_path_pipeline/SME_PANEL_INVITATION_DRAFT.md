@@ -4,7 +4,7 @@
 
 We are developing an evidence-based method for identifying likely short-path and long-path HF propagation using WSPR activity, solar illumination, grey-line geometry, and transparent propagation rules.
 
-The goal is to produce a practical grey-line and propagation reporting tool that can be used by radio operators, emergency communications groups, scientific users, and other organisations without requiring specialist antenna systems.
+The goal is to produce a practical propagation reporting tool that can be used by radio operators, emergency communications groups, scientific users, and other organisations without requiring specialist antenna systems.
 
 ## Why This Work Is Needed
 
@@ -57,7 +57,7 @@ The intended outcome is a report that can say, in plain language:
 - Whether independent validation agrees with the theory.
 - What limitations or cautions apply.
 
-The method should remain inspectable. A reviewer should be able to see why a confidence rating was assigned.
+The method should remain transparent. A reviewer should be able to see why a confidence rating was assigned.
 
 ## Reviewers Will Receive
 
@@ -80,18 +80,32 @@ Variables in the ledger report (draft):
    
 6. Validation
 
-   a. Daily path matrix
+   a. Directional Antennas
    b. Propagation rules
-   c. Option - Directional Antennas
+   c. Daily path matrix
 
-## Model Fitting and Validation
-The script uses regression (data-driven optimization) as the primary method for determining the coefficients (weights) for the path score variables. The function model_matrix() builds a matrix of features (variables) and the observed direction scores. The function fit_wls() (weighted least squares) is used to fit the model, finding the optimal coefficients (betas) for each variable to best match the observed data.
+## Model Fitting
+
+How the Model Indicates Short-Path or Long-Path
+
+When directional antenna data is available, the model uses the difference in spot counts between antennas (a = short-path, b = long-path):
+
+If (a - b) is positive, the indication is short-path.
+If (a - b) is negative, the indication is long-path.
+
+When antenna data is not available (the common case for most reviewers), the model calculates a path score for both the short-path and long-path using fitted coefficients and the relevant variables: (dark_fraction, twilight_fraction, endpoint_twilight_score) for each path.
+
+The model computes the score for both the short-path and the long-path for each time-slot.
+The path with the higher score is indicated as the likely propagation path.
+This approach allows the model to provide a short-path or long-path indication based solely on propagation theory and observed data, even without directional antennas. The regression ensures that the coefficients are optimised to best match the observed outcomes in cases where validation data is available.
+
+The model uses separate coefficients for each band (40m 30m 20m).
+
+The script uses regression (data-driven optimisation) as the primary method for determining the coefficients (weights) for the path score variables. A function model_matrix() builds a matrix of features (variables) and the observed direction scores. The function fit_wls() (weighted least squares) is used to fit the model, finding the optimal coefficients (betas) for each variable to best match the observed data.
 
 This is a form of regression, and the script also includes an r2_score() function to compute the coefficient of determination (figure of merit). Ideally, we are looking for an r2_score() figure of merit of at least 0.7. The figure will improve as we get feedback from reviewers.
 
-Reviewers can adjust the calculated coefficients to better reflect their own environment or region. This flexibility allows for practical adaptation and helps inform future model refinements, especially for different latitudes or seasonal conditions. Feedback from reviewer adjustments is encouraged and will be used to improve the regression model.
-
-The script also supports fixed theoretical weights (e.g., 0.70, 0.20, 0.10) for transparency and historical comparison, but these are not the recommended standard for all regions.
+Reviewers have flexibility to adjust and override the calculated coefficients to better reflect their own environment or region. This flexibility allows for practical adaptation and helps inform future model refinements, especially for different latitudes and seasonal conditions. Feedback from reviewer adjustments is encouraged and will be used to improve the regression model.
 
 Note: Consistency over time (e.g., through seasons) is a possible future variable for confidence, pending sufficient data.
 
