@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Long-Path WSPR Research</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5d6d7e;
+      --line: #d7dde5;
+      --blue: #2364aa;
+      --green: #1f8a5b;
+      --orange: #c76a22;
+      --red: #b23b3b;
+      --night: #344055;
+      --twilight: #aeb8c8;
+      --day: #fff1bf;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+    header {
+      background: #182431;
+      color: white;
+      padding: 20px 24px;
+      border-bottom: 4px solid var(--green);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+    header p {
+      margin: 6px 0 0;
+      color: #d8e2ec;
+      max-width: 980px;
+    }
+    main {
+      width: min(1320px, calc(100% - 32px));
+      margin: 18px auto 40px;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 14px 0;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+    h3 {
+      font-size: 15px;
+      margin: 0 0 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .grid.summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 900px) {
+      .grid, .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .grid.summary-grid { grid-template-columns: 1fr; }
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input[type="file"], input[type="text"], input[type="number"], select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font: inherit;
+      background: white;
+    }
+    input[readonly] { background: #eef2f6; color: #263442; }
+    button {
+      border: 1px solid #1d4f84;
+      background: var(--blue);
+      color: white;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: white;
+      color: var(--blue);
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status {
+      padding: 10px 12px;
+      background: #edf7f2;
+      border: 1px solid #c7e6d8;
+      border-radius: 6px;
+      color: #184f37;
+      min-height: 42px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      background: #fafbfc;
+    }
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .coeff-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .coeff-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fbfcfe;
+    }
+    .band-workspace {
+      border-top: 2px solid #aeb8c8;
+      padding-top: 12px;
+    }
+    .band-workspace:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+    .band-workspace .coeff-panel {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .band-chart-host {
+      border: 1px solid var(--line);
+      border-top: 0;
+      padding: 0 8px 2px;
+      background: white;
+    }
+    .band-chart-host .regression-svg {
+      margin-top: 2px;
+    }
+    .coeff-grid {
+      display: grid;
+      grid-template-columns: minmax(170px, 1fr) 118px 118px;
+      gap: 7px 8px;
+      align-items: center;
+      max-width: 520px;
+    }
+    .coeff-head {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .coeff-row {
+      display: contents;
+    }
+    .coeff-grid input {
+      width: 100%;
+    }
+    @media (max-width: 640px) {
+      .coeff-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .coeff-grid > div:first-child {
+        display: none;
+      }
+      .coeff-row label {
+        grid-column: 1 / -1;
+        margin-top: 4px;
+      }
+    }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      max-height: 70vh;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 920px;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 8px;
+      text-align: right;
+    }
+    td { white-space: nowrap; }
+    th {
+      position: sticky;
+      top: 0;
+      background: #edf1f5;
+      z-index: 1;
+      color: #25313d;
+      white-space: normal;
+      line-height: 1.08;
+      vertical-align: bottom;
+      min-width: 72px;
+    }
+    td:first-child, th:first-child { text-align: left; }
+    .band-section {
+      margin: 0;
+      padding-top: 2px;
+    }
+    .chart-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .chart-title h3 { margin: 0; font-size: 17px; }
+    .slot-grid {
+      display: grid;
+      grid-template-columns: 56px repeat(48, minmax(14px, 1fr));
+      gap: 2px;
+      align-items: end;
+    }
+    .hour-row {
+      align-items: center;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .hour-row div { text-align: center; }
+    .hour-row .axis-label {
+      text-align: right;
+      padding-right: 6px;
+      font-size: 11px;
+    }
+    .bar-cell {
+      height: 120px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: end;
+      gap: 1px;
+      border-bottom: 1px solid #6f7c8a;
+      background: linear-gradient(to top, #eef2f6, #eef2f6 49%, #d9e0e8 50%, #eef2f6 51%);
+    }
+    .bar {
+      width: 100%;
+      min-height: 1px;
+      border-radius: 2px 2px 0 0;
+    }
+    .loop2 { background: var(--blue); }
+    .loop3 { background: var(--orange); }
+    .model { background: var(--green); }
+    .regression-svg {
+      width: 100%;
+      max-width: 1320px;
+      height: auto;
+      display: block;
+      margin: 12px 0 10px;
+    }
+    .regression-svg .obs-short { fill: #1f77b4; }
+    .regression-svg .obs-long { fill: #ff7f0e; }
+    .regression-svg .model-short { fill: #9ecae1; }
+    .regression-svg .model-long { fill: #fdd0a2; }
+    .regression-svg .model-neutral { fill: #cfd6df; }
+    .regression-svg .axis { stroke: #333; stroke-width: 1; }
+    .regression-svg .grid { stroke: #dfe3e8; stroke-width: 1; }
+    .regression-svg .tick { fill: #4a5568; font-size: 10px; }
+    .regression-svg .axis-label,
+    .regression-svg .strip-label { fill: #3b4652; font-size: 12px; }
+    .regression-svg .chart-title { display: block; fill: #1d2733; font-weight: 700; font-size: 14px; }
+    .regression-svg .equation { fill: #1d2733; font-size: 13px; font-weight: 700; }
+    .strip-label {
+      text-align: right;
+      padding-right: 6px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .strip-cell {
+      height: 14px;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      display: inline-block;
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .tab {
+      background: white;
+      color: var(--blue);
+      border-color: var(--line);
+    }
+    .tab.active {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    .hidden { display: none; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    @media print {
+      header, #inputPanel, .actions, .tabs { display: none !important; }
+      main { width: 100%; margin: 0; }
+      section { border: 0; page-break-inside: avoid; }
+      body { background: white; }
+      .bar, .strip-cell, .swatch {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Long-Path WSPR Research</h1>
+    <p>Browser prototype for VK4EMM fixed-loop validation data. First milestone: reproduce the Python reference tables, fit the simple regression, and show the 40m / 30m / 20m visual story.</p>
+  </header>
+
+  <main>
+    <section id="inputPanel">
+      <h2>Load VK4EMM Antenna Data</h2>
+      <div class="grid two">
+        <div>
+          <label for="csvFiles">VK4EMM CSV files</label>
+          <input id="csvFiles" type="file" accept=".csv,text/csv" multiple>
+        </div>
+        <div>
+          <label for="pathName">Reference path label</label>
+          <input id="pathName" type="text" value="Brisbane QG62LR <> Europe">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnBuild" type="button">Build Tables</button>
+        <button id="btnSample" class="secondary" type="button">Use Selected Files Again</button>
+      </div>
+      <p class="note">Select one or more VK4EMM antenna CSV files. The app reads local files only after you choose them.</p>
+      <p class="note mono" id="selectedFileList">No files selected.</p>
+      <div id="status" class="status">Waiting for CSV files.</div>
+    </section>
+
+    <section>
+      <h2>Run Summary</h2>
+      <div class="grid summary-grid">
+        <div class="metric"><strong id="rawCount">0</strong><span>Raw rows loaded</span></div>
+        <div class="metric"><strong id="featureCount">0</strong><span>Feature rows</span></div>
+        <div class="metric"><strong id="truthCount">0</strong><span>Europe bar-truth rows</span></div>
+        <div class="metric"><strong id="dateRange">-</strong><span>UTC dates</span></div>
+        <div class="metric"><strong id="spotTotal">0</strong><span>Europe observations</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Band Analysis Summary</h2>
+      <p class="note">Each band and each path are checked independently. Short-path predicted counts for Loop 2 are compared with short-path observed counts for Loop 2. Long-path predicted counts for Loop 3 are compared with long-path observed counts for Loop 3. The comparison can also be made with R2 for short-path and R2 for long-path. A blended R2 made by merging both paths will not be valid.</p>
+      <div id="bandAnalysis" class="table-wrap"></div>
+    </section>
+
+    <section>
+      <div class="chart-title">
+        <h2>Band Models And Charts</h2>
+        <span class="note" id="visualSubtitle">Load data to build the chart.</span>
+      </div>
+      <p class="note">Each band has independent Model and Trial coefficients.<br>On each band, the chart shows observed counts for Loop 3 and Loop 2. The model predictions are shown only for the dominant path. Predictions for both paths are available in "Regression Predictions".</p>
+      <div class="grid two" style="margin-bottom:10px;">
+        <div>
+          <label for="visualDate">Visual date UTC</label>
+          <select id="visualDate" disabled>
+            <option value="">Load data first</option>
+          </select>
+        </div>
+        <div class="note" style="align-self:end;">
+          The visual story should normally be read one UTC day at a time because darkness and twilight move day by day.
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="swatch loop2"></i>Observed evidence, Loop 2 dominant</span>
+        <span><i class="swatch loop3"></i>Observed evidence, Loop 3 dominant</span>
+        <span><i class="swatch model"></i>Simple model</span>
+        <span><i class="swatch" style="background:var(--night)"></i>Endpoint night</span>
+        <span><i class="swatch" style="background:var(--twilight)"></i>Endpoint twilight</span>
+        <span><i class="swatch" style="background:var(--day)"></i>Endpoint daylight</span>
+      </div>
+      <p class="note"><strong>Sandwich colour guide:</strong> Dominance confidence green means strong antenna dominance with enough spots; yellow means moderate evidence; grey means low or no evidence. Receiver and beacon rows use dark grey for night, light grey for twilight, and light yellow for daylight. Path grey-line overlap uses blue to highlight time periods when sampled grey-line support overlaps along the reference path.</p>
+      <div class="coeff-wrap" id="coefficientHost">
+        <p class="note">Model coefficients and charts appear after data is loaded.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Tables And Exports</h2>
+      <div class="tabs">
+        <button class="tab active" type="button" data-tab="truth">Europe Bar Truth</button>
+        <button class="tab" type="button" data-tab="predictions">Regression Predictions</button>
+        <button class="tab" type="button" data-tab="features">Feature Rows</button>
+      </div>
+      <div class="actions">
+        <button id="exportTruth" class="secondary" type="button" disabled>Export Europe Bar Truth CSV</button>
+        <button id="exportPredictions" class="secondary" type="button" disabled>Export Regression Predictions CSV</button>
+        <button id="exportFeatures" class="secondary" type="button" disabled>Export Feature Rows CSV</button>
+        <button id="exportHtmlReport" class="secondary" type="button" disabled>Export HTML Report</button>
+        <button id="exportManifest" class="secondary" type="button" disabled>Export Manifest</button>
+        <button id="printReport" class="secondary" type="button">Print / PDF</button>
+      </div>
+      <div id="tableHost" class="table-wrap" style="margin-top:12px;"></div>
+    </section>
+
+    <section>
+      <h2>About This Prototype</h2>
+      <p>This first JavaScript port is intentionally narrow. It is designed to establish numerical trust against the Python reference before adding broader operator tools.</p>
+      <p>The simple model estimates the observed antenna path dominance score from <span class="mono">constant</span>, <span class="mono">dark_delta</span>, <span class="mono">greyline_delta</span>, and <span class="mono">endpoint_twilight</span>. Coefficients are fitted separately for each band. Weighted R2 uses spot count as the weight. SNR is not used.</p>
+      <p><span class="mono">bearing_difference</span> values are degrees between a fixed antenna bearing and a calculated path bearing. Values can be high because an antenna may be pointing away from that path; 0 degrees is aligned, 90 degrees is broadside, and 180 degrees is opposite.</p>
+    </section>
+  </main>
+
+  <script>
+    const RX_GRID = "QG62LR";
+    const EUROPE_REFERENCE_LAT = 50.1109;
+    const EUROPE_REFERENCE_LON = 8.6821;
+    const LOOP2_BEARING_DEG = 330.0;
+    const LOOP3_BEARING_DEG = 150.0;
+    const EARTH_RADIUS_KM = 6371.0088;
+    const BANDS = [40, 30, 20];
+    const COEFFICIENTS = ["constant", "dark_delta", "greyline_delta", "endpoint_twilight"];
+    const FEATURE_FIELDS = [
+      "date_utc","utc_slot","slot_index","band_m","continent","country_code","tx_grid",
+      "loop2_count","loop3_count","observation_count","loop2_share","path_dominance_score",
+      "short_path_km","long_path_km","rx_short_path_bearing","rx_long_path_bearing",
+      "loop2_bearing_difference_short","loop3_bearing_difference_long",
+      "rx_sun_altitude","tx_sun_altitude",
+      "short_path_mean_sun_altitude","long_path_mean_sun_altitude",
+      "short_path_dark_fraction","long_path_dark_fraction",
+      "short_path_greyline_fraction","long_path_greyline_fraction"
+    ];
+    const TRUTH_FIELDS = [
+      "date_utc","utc_slot","slot_index","band_m","loop2_count","loop3_count",
+      "observation_count","path_dominance_score","rx_sun_altitude","tx_sun_altitude",
+      "short_path_dark_fraction","long_path_dark_fraction","dark_delta",
+      "short_path_greyline_fraction","long_path_greyline_fraction","greyline_delta",
+      "endpoint_twilight_score"
+    ];
+    const PREDICTION_FIELDS = [
+      "date_utc","utc_slot","slot_index","band_m",
+      "loop2_count","model_predicted_loop2_count",
+      "loop3_count","model_predicted_loop3_count",
+      "observation_count","observed_antenna_path_dominance_score",
+      "simple_model_path_dominance_score","simple_residual",
+    ];
+
+    let app = {
+      rawRows: [],
+      features: [],
+      observedBars: [],
+      truth: [],
+      predictions: [],
+      bandModels: {},
+      visualDate: "",
+      activeTab: "truth"
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const fmt = (value, digits = 3) => Number.isFinite(value) ? Number(value).toFixed(digits) : "-";
+    const fmtSig = (value, digits = 3) => Number.isFinite(value) ? Number(value).toPrecision(digits).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "") : "-";
+    const fmtR2 = (value) => Number.isFinite(value) ? Math.max(0, Number(value)).toFixed(2) : "-";
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+
+    function radians(deg) { return deg * Math.PI / 180; }
+    function degrees(rad) { return rad * 180 / Math.PI; }
+    function clamp(value, low, high) { return Math.min(high, Math.max(low, value)); }
+
+    function maidenheadToLatLon(grid) {
+      const g = String(grid || "").trim().toUpperCase();
+      if (g.length < 4) throw new Error("Maidenhead grid too short");
+      let lon = (g.charCodeAt(0) - 65) * 20 - 180;
+      let lat = (g.charCodeAt(1) - 65) * 10 - 90;
+      lon += Number(g[2]) * 2;
+      lat += Number(g[3]);
+      let lonSize = 2.0;
+      let latSize = 1.0;
+      if (g.length >= 6) {
+        lon += (g.charCodeAt(4) - 65) * (5.0 / 60.0);
+        lat += (g.charCodeAt(5) - 65) * (2.5 / 60.0);
+        lonSize = 5.0 / 60.0;
+        latSize = 2.5 / 60.0;
+      }
+      if (g.length >= 8) {
+        lon += Number(g[6]) * (5.0 / 600.0);
+        lat += Number(g[7]) * (2.5 / 600.0);
+        lonSize = 5.0 / 600.0;
+        latSize = 2.5 / 600.0;
+      }
+      return [lat + latSize / 2.0, lon + lonSize / 2.0];
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const p1 = radians(lat1), p2 = radians(lat2);
+      const dp = radians(lat2 - lat1), dl = radians(lon2 - lon1);
+      const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+      return 2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+    }
+
+    function initialBearingDeg(lat1, lon1, lat2, lon2) {
+      const p1 = radians(lat1), p2 = radians(lat2), dl = radians(lon2 - lon1);
+      const y = Math.sin(dl) * Math.cos(p2);
+      const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+      return (degrees(Math.atan2(y, x)) + 360) % 360;
+    }
+
+    function bearingDifferenceDeg(a, b) {
+      return Math.abs(((a - b + 180) % 360) - 180);
+    }
+
+    function interpolateGc(lat1, lon1, lat2, lon2, f) {
+      const p1 = radians(lat1), l1 = radians(lon1), p2 = radians(lat2), l2 = radians(lon2);
+      const d = 2 * Math.asin(Math.sqrt(
+        Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2
+      ));
+      if (d === 0) return [lat1, lon1];
+      const a = Math.sin((1 - f) * d) / Math.sin(d);
+      const b = Math.sin(f * d) / Math.sin(d);
+      const x = a * Math.cos(p1) * Math.cos(l1) + b * Math.cos(p2) * Math.cos(l2);
+      const y = a * Math.cos(p1) * Math.sin(l1) + b * Math.cos(p2) * Math.sin(l2);
+      const z = a * Math.sin(p1) + b * Math.sin(p2);
+      const lat = degrees(Math.atan2(z, Math.sqrt(x * x + y * y)));
+      const lon = degrees(Math.atan2(y, x));
+      return [lat, ((lon + 540) % 360) - 180];
+    }
+
+    function llToVector(lat, lon) {
+      const p = radians(lat), l = radians(lon);
+      return [Math.cos(p) * Math.cos(l), Math.cos(p) * Math.sin(l), Math.sin(p)];
+    }
+
+    function vectorToLl(v) {
+      let [x, y, z] = v;
+      const norm = Math.sqrt(x * x + y * y + z * z);
+      x /= norm; y /= norm; z /= norm;
+      const lat = degrees(Math.atan2(z, Math.sqrt(x * x + y * y)));
+      const lon = degrees(Math.atan2(y, x));
+      return [lat, ((lon + 540) % 360) - 180];
+    }
+
+    function cross(a, b) {
+      return [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0]
+      ];
+    }
+
+    function dot(a, b) {
+      return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    }
+
+    function normalize(v) {
+      const norm = Math.sqrt(dot(v, v));
+      if (norm === 0) return [0, 0, 0];
+      return [v[0] / norm, v[1] / norm, v[2] / norm];
+    }
+
+    function rotateVector(v, axis, angle) {
+      const c = Math.cos(angle), s = Math.sin(angle);
+      const axv = cross(axis, v);
+      const adv = dot(axis, v);
+      return [
+        v[0] * c + axv[0] * s + axis[0] * adv * (1 - c),
+        v[1] * c + axv[1] * s + axis[1] * adv * (1 - c),
+        v[2] * c + axv[2] * s + axis[2] * adv * (1 - c)
+      ];
+    }
+
+    function interpolateLongGc(lat1, lon1, lat2, lon2, f) {
+      const u = llToVector(lat1, lon1);
+      const v = llToVector(lat2, lon2);
+      const normal = normalize(cross(u, v));
+      const central = Math.acos(clamp(dot(u, v), -1, 1));
+      if (central === 0) return [lat1, lon1];
+      const angle = -f * (2 * Math.PI - central);
+      return vectorToLl(rotateVector(u, normal, angle));
+    }
+
+    function dayOfYear(dt) {
+      const start = Date.UTC(dt.getUTCFullYear(), 0, 1);
+      return Math.floor((dt.getTime() - start) / 86400000) + 1;
+    }
+
+    function sunDeclinationAndEqtime(dt) {
+      const n = dayOfYear(dt);
+      const minutes = dt.getUTCHours() * 60 + dt.getUTCMinutes() + dt.getUTCSeconds() / 60.0;
+      const gamma = 2 * Math.PI / 365 * (n - 1 + (minutes - 720) / 1440);
+      const eqtime = 229.18 * (
+        0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma)
+        - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma)
+      );
+      const decl = (
+        0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma)
+        - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma)
+        - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma)
+      );
+      return [decl, eqtime];
+    }
+
+    function solarAltitudeDeg(lat, lon, dt) {
+      const [decl, eqtime] = sunDeclinationAndEqtime(dt);
+      const minutes = dt.getUTCHours() * 60 + dt.getUTCMinutes() + dt.getUTCSeconds() / 60.0;
+      const trueSolarTime = ((minutes + eqtime + 4 * lon) % 1440 + 1440) % 1440;
+      const hourAngle = trueSolarTime / 4 - 180;
+      const latRad = radians(lat);
+      const haRad = radians(hourAngle);
+      const cosZenith = clamp(
+        Math.sin(latRad) * Math.sin(decl) + Math.cos(latRad) * Math.cos(decl) * Math.cos(haRad),
+        -1, 1
+      );
+      return 90 - degrees(Math.acos(cosZenith));
+    }
+
+    function pathSolarFeatures(rxLat, rxLon, txLat, txLon, dt, longPath, samples = 25) {
+      const alts = [];
+      for (let i = 0; i < samples; i++) {
+        const f = i / (samples - 1);
+        const [lat, lon] = longPath
+          ? interpolateLongGc(rxLat, rxLon, txLat, txLon, f)
+          : interpolateGc(rxLat, rxLon, txLat, txLon, f);
+        alts.push(solarAltitudeDeg(lat, lon, dt));
+      }
+      const meanAlt = alts.reduce((a, b) => a + b, 0) / alts.length;
+      const darkFraction = alts.filter(a => a < 0).length / alts.length;
+      const greylineFraction = alts.filter(a => a >= -6 && a <= 6).length / alts.length;
+      return [meanAlt, darkFraction, greylineFraction];
+    }
+
+    function slotFromDt(dt) {
+      const slot = dt.getUTCHours() * 2 + (dt.getUTCMinutes() >= 30 ? 1 : 0);
+      return [slot, `${String(Math.floor(slot / 2)).padStart(2, "0")}:${String((slot % 2) * 30).padStart(2, "0")}`];
+    }
+
+    function slotDate(dt, slotIndex) {
+      return new Date(Date.UTC(
+        dt.getUTCFullYear(),
+        dt.getUTCMonth(),
+        dt.getUTCDate(),
+        Math.floor(slotIndex / 2),
+        slotIndex % 2 ? 30 : 0,
+        0,
+        0
+      ));
+    }
+
+    function greylineAltitudeScore(altitudeDeg, widthDeg = 12.0) {
+      return Math.max(0, 1 - Math.abs(altitudeDeg) / widthDeg);
+    }
+
+    function weightedAverage(values) {
+      const totalWeight = values.reduce((sum, item) => sum + item[1], 0);
+      if (!totalWeight) return 0;
+      return values.reduce((sum, item) => sum + item[0] * item[1], 0) / totalWeight;
+    }
+
+    function parseCsv(text) {
+      text = text.replace(/^\uFEFF/, "");
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (inQuotes) {
+          if (ch === '"' && next === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ",") {
+          row.push(field);
+          field = "";
+        } else if (ch === "\n") {
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = "";
+        } else if (ch !== "\r") {
+          field += ch;
+        }
+      }
+      if (field.length || row.length) {
+        row.push(field);
+        rows.push(row);
+      }
+      if (!rows.length) return [];
+      const headers = rows.shift().map(h => h.trim().replace(/^\uFEFF/, ""));
+      return rows
+        .filter(r => r.some(v => String(v).trim() !== ""))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = r[i] ?? ""; });
+          return obj;
+        });
+    }
+
+    async function readSelectedFiles() {
+      const files = Array.from($("csvFiles").files || []);
+      if (!files.length) throw new Error("Please select one or more CSV files.");
+      const all = [];
+      for (const file of files) {
+        const text = await file.text();
+        const rows = parseCsv(text);
+        rows.forEach(row => row._source_file = file.name);
+        all.push(...rows);
+      }
+      return all;
+    }
+
+    function buildFeatureRows(rawRows) {
+      const [rxLat, rxLon] = maidenheadToLatLon(RX_GRID);
+      const grouped = new Map();
+      const dtByKey = new Map();
+      for (const row of rawRows) {
+        const antenna = String(row.antenna || "").trim();
+        if (antenna !== "Loop 2" && antenna !== "Loop 3") continue;
+        const band = Math.trunc(Number(row.band));
+        if (![20, 30, 40].includes(band)) continue;
+        const dt = dtFromRow(row);
+        if (!dt) continue;
+        const [slotIndex, slotLabel] = slotFromDt(dt);
+        const dateUtc = dt.toISOString().slice(0, 10);
+        const continent = String(row.continent || "").trim() || "Unknown";
+        const countryCode = String(row.country_code || "").trim() || "Unknown";
+        const txGrid = String(row.tx_grid || "").trim().toUpperCase();
+        const keyParts = [dateUtc, slotIndex, slotLabel, band, continent, countryCode, txGrid];
+        const key = JSON.stringify(keyParts);
+        if (!grouped.has(key)) grouped.set(key, {"Loop 2": 0, "Loop 3": 0, keyParts});
+        grouped.get(key)[antenna] += 1;
+        dtByKey.set(key, slotDate(dt, slotIndex));
+      }
+      const out = [];
+      for (const [key, counts] of Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+        const [dateUtc, slotIndex, slotLabel, band, continent, countryCode, txGrid] = counts.keyParts;
+        const loop2 = counts["Loop 2"] || 0;
+        const loop3 = counts["Loop 3"] || 0;
+        const total = loop2 + loop3;
+        if (!total) continue;
+        let txLat, txLon;
+        try {
+          [txLat, txLon] = maidenheadToLatLon(txGrid);
+        } catch {
+          continue;
+        }
+        const dt = dtByKey.get(key);
+        const spKm = haversineKm(rxLat, rxLon, txLat, txLon);
+        const lpKm = 2 * Math.PI * EARTH_RADIUS_KM - spKm;
+        const spBearing = initialBearingDeg(rxLat, rxLon, txLat, txLon);
+        const lpBearing = (spBearing + 180) % 360;
+        const rxAlt = solarAltitudeDeg(rxLat, rxLon, dt);
+        const txAlt = solarAltitudeDeg(txLat, txLon, dt);
+        const [spMeanAlt, spDark, spGl] = pathSolarFeatures(rxLat, rxLon, txLat, txLon, dt, false);
+        const [lpMeanAlt, lpDark, lpGl] = pathSolarFeatures(rxLat, rxLon, txLat, txLon, dt, true);
+        out.push({
+          date_utc: dateUtc,
+          utc_slot: slotLabel,
+          slot_index: slotIndex,
+          band_m: band,
+          continent,
+          country_code: countryCode,
+          tx_grid: txGrid,
+          loop2_count: loop2,
+          loop3_count: loop3,
+          observation_count: total,
+          loop2_share: loop2 / total,
+          path_dominance_score: (loop2 - loop3) / total,
+          short_path_km: spKm,
+          long_path_km: lpKm,
+          rx_short_path_bearing: spBearing,
+          rx_long_path_bearing: lpBearing,
+          loop2_bearing_difference_short: bearingDifferenceDeg(LOOP2_BEARING_DEG, spBearing),
+          loop2_bearing_difference_long: bearingDifferenceDeg(LOOP2_BEARING_DEG, lpBearing),
+          loop3_bearing_difference_short: bearingDifferenceDeg(LOOP3_BEARING_DEG, spBearing),
+          loop3_bearing_difference_long: bearingDifferenceDeg(LOOP3_BEARING_DEG, lpBearing),
+          rx_sun_altitude: rxAlt,
+          tx_sun_altitude: txAlt,
+          short_path_mean_sun_altitude: spMeanAlt,
+          long_path_mean_sun_altitude: lpMeanAlt,
+          short_path_dark_fraction: spDark,
+          long_path_dark_fraction: lpDark,
+          short_path_greyline_fraction: spGl,
+          long_path_greyline_fraction: lpGl
+        });
+      }
+      return out;
+    }
+
+    function dtFromRow(row) {
+      const raw = Number(row.utc_timestamp || row.inserted_at);
+      if (!Number.isFinite(raw)) return null;
+      const ms = raw > 100000000000 ? raw : raw * 1000;
+      const dt = new Date(ms);
+      return Number.isFinite(dt.getTime()) ? dt : null;
+    }
+
+    function buildObservedBarRows(rawRows) {
+      const map = new Map();
+      for (const row of rawRows) {
+        const antenna = String(row.antenna || "").trim();
+        if (antenna !== "Loop 2" && antenna !== "Loop 3") continue;
+        const continent = String(row.continent || "").trim();
+        if (continent !== "Europe") continue;
+        const band = Math.trunc(Number(row.band));
+        if (![20, 30, 40].includes(band)) continue;
+        const dt = dtFromRow(row);
+        if (!dt) continue;
+        const [slotIndex, slotLabel] = slotFromDt(dt);
+        const dateUtc = dt.toISOString().slice(0, 10);
+        const key = `${dateUtc}|${band}|${slotIndex}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            date_utc: dateUtc,
+            band_m: band,
+            slot_index: slotIndex,
+            utc_slot: slotLabel,
+            loop2: 0,
+            loop3: 0
+          });
+        }
+        if (antenna === "Loop 2") map.get(key).loop2 += 1;
+        if (antenna === "Loop 3") map.get(key).loop3 += 1;
+      }
+      return Array.from(map.values()).sort((a, b) =>
+        a.date_utc.localeCompare(b.date_utc) || a.band_m - b.band_m || a.slot_index - b.slot_index
+      );
+    }
+
+    function buildEuropeBarTruthRows(rows) {
+      const grouped = new Map();
+      for (const row of rows) {
+        if (row.continent !== "Europe") continue;
+        const keyParts = [row.date_utc, row.utc_slot, row.slot_index, row.band_m];
+        const key = JSON.stringify(keyParts);
+        if (!grouped.has(key)) grouped.set(key, {keyParts, rows: []});
+        grouped.get(key).rows.push(row);
+      }
+      const out = [];
+      for (const item of Array.from(grouped.values()).sort((a, b) => JSON.stringify(a.keyParts).localeCompare(JSON.stringify(b.keyParts)))) {
+        const [dateUtc, utcSlot, slotIndex, bandM] = item.keyParts;
+        const group = item.rows;
+        const loop2 = group.reduce((sum, r) => sum + r.loop2_count, 0);
+        const loop3 = group.reduce((sum, r) => sum + r.loop3_count, 0);
+        const total = loop2 + loop3;
+        if (!total) continue;
+        const rxAlt = weightedAverage(group.map(r => [r.rx_sun_altitude, r.observation_count]));
+        const txAlt = weightedAverage(group.map(r => [r.tx_sun_altitude, r.observation_count]));
+        const shortDark = weightedAverage(group.map(r => [r.short_path_dark_fraction, r.observation_count]));
+        const longDark = weightedAverage(group.map(r => [r.long_path_dark_fraction, r.observation_count]));
+        const shortGreyline = weightedAverage(group.map(r => [r.short_path_greyline_fraction, r.observation_count]));
+        const longGreyline = weightedAverage(group.map(r => [r.long_path_greyline_fraction, r.observation_count]));
+        const endpointTwilight = Math.max(greylineAltitudeScore(rxAlt), greylineAltitudeScore(txAlt));
+        out.push({
+          date_utc: dateUtc,
+          utc_slot: utcSlot,
+          slot_index: slotIndex,
+          band_m: bandM,
+          loop2_count: loop2,
+          loop3_count: loop3,
+          observation_count: total,
+          path_dominance_score: (loop2 - loop3) / total,
+          rx_sun_altitude: rxAlt,
+          tx_sun_altitude: txAlt,
+          short_path_dark_fraction: shortDark,
+          long_path_dark_fraction: longDark,
+          dark_delta: shortDark - longDark,
+          short_path_greyline_fraction: shortGreyline,
+          long_path_greyline_fraction: longGreyline,
+          greyline_delta: shortGreyline - longGreyline,
+          endpoint_twilight_score: endpointTwilight
+        });
+      }
+      return out;
+    }
+
+    function simpleVector(row) {
+      return [1, row.dark_delta, row.greyline_delta, row.endpoint_twilight_score];
+    }
+
+    function solveLinear(a, b) {
+      const n = b.length;
+      const aug = a.map((row, i) => row.slice().concat([b[i]]));
+      for (let col = 0; col < n; col++) {
+        let pivot = col;
+        for (let r = col + 1; r < n; r++) {
+          if (Math.abs(aug[r][col]) > Math.abs(aug[pivot][col])) pivot = r;
+        }
+        if (Math.abs(aug[pivot][col]) < 1e-12) {
+          aug[col][col] += 1e-8;
+          pivot = col;
+        }
+        [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+        const div = aug[col][col];
+        aug[col] = aug[col].map(v => v / div);
+        for (let r = 0; r < n; r++) {
+          if (r === col) continue;
+          const factor = aug[r][col];
+          aug[r] = aug[r].map((v, c) => v - factor * aug[col][c]);
+        }
+      }
+      return aug.map(row => row[row.length - 1]);
+    }
+
+    function fitWls(x, y, weights = null) {
+      const rows = x.length;
+      const cols = x[0].length;
+      weights = weights || Array(rows).fill(1);
+      const xtx = Array.from({length: cols}, () => Array(cols).fill(0));
+      const xty = Array(cols).fill(0);
+      const ridge = 1e-8;
+      for (let r = 0; r < rows; r++) {
+        for (let i = 0; i < cols; i++) {
+          xty[i] += weights[r] * x[r][i] * y[r];
+          for (let j = 0; j < cols; j++) {
+            xtx[i][j] += weights[r] * x[r][i] * x[r][j];
+          }
+        }
+      }
+      for (let i = 1; i < cols; i++) xtx[i][i] += ridge;
+      return solveLinear(xtx, xty);
+    }
+
+    function predict(x, beta) {
+      return x.map(row => row.reduce((sum, v, i) => sum + v * beta[i], 0));
+    }
+
+    function r2Score(y, pred, weights = null) {
+      weights = weights || Array(y.length).fill(1);
+      const wsum = weights.reduce((a, b) => a + b, 0);
+      if (!wsum) return 0;
+      const ybar = y.reduce((sum, v, i) => sum + v * weights[i], 0) / wsum;
+      const ssRes = y.reduce((sum, v, i) => sum + weights[i] * (v - pred[i]) ** 2, 0);
+      const ssTot = y.reduce((sum, v, i) => sum + weights[i] * (v - ybar) ** 2, 0);
+      return ssTot ? 1 - ssRes / ssTot : 0;
+    }
+
+    function binomialTailEqualProbability(total, dominantCount) {
+      if (total <= 0 || dominantCount <= total / 2) return 1;
+      let probability = 0;
+      let term = 2 ** -total;
+      for (let k = 0; k <= total; k++) {
+        if (k >= dominantCount) probability += term;
+        if (k < total) term *= (total - k) / (k + 1);
+      }
+      return probability;
+    }
+
+    function runRegression(rows, betaOverride = null) {
+      if (!rows.length) return {beta: null, pred: [], weightedR2: null, unweightedR2: null, predictions: []};
+      const x = rows.map(simpleVector);
+      const y = rows.map(r => r.path_dominance_score);
+      const weights = rows.map(r => Number(r.observation_count));
+      const beta = betaOverride || fitWls(x, y, weights);
+      const pred = predict(x, beta);
+      const weightedR2 = r2Score(y, pred, weights);
+      const unweightedR2 = r2Score(y, pred);
+      const predictions = rows.map((row, i) => {
+        const simple = pred[i];
+        const clipped = clamp(simple, -1, 1);
+        const loop2Share = (clipped + 1) / 2;
+        const predictedLoop2 = row.observation_count * loop2Share;
+        const predictedLoop3 = row.observation_count - predictedLoop2;
+        return {
+          date_utc: row.date_utc,
+          utc_slot: row.utc_slot,
+          slot_index: row.slot_index,
+          band_m: row.band_m,
+          loop2_count: row.loop2_count,
+          loop3_count: row.loop3_count,
+          observation_count: row.observation_count,
+          observed_antenna_path_dominance_score: row.path_dominance_score,
+          simple_model_path_dominance_score: simple,
+          simple_residual: row.path_dominance_score - simple,
+          model_predicted_loop2_count: predictedLoop2,
+          model_predicted_loop3_count: predictedLoop3
+        };
+      });
+      return {beta, pred, weightedR2, unweightedR2, predictions};
+    }
+
+    function runBandRegressions(rows) {
+      const bandModels = {};
+      const predictions = [];
+      BANDS.forEach(band => {
+        const bandRows = rows.filter(row => Number(row.band_m) === band);
+        if (!bandRows.length) return;
+        const reg = runRegression(bandRows);
+        bandModels[band] = {
+          modelBeta: reg.beta,
+          activeBeta: reg.beta,
+          weightedR2: reg.weightedR2,
+          unweightedR2: reg.unweightedR2
+        };
+        predictions.push(...reg.predictions);
+      });
+      return {bandModels, predictions};
+    }
+
+    function replaceBandPredictions(predictions, band, bandPredictions) {
+      return predictions
+        .filter(row => Number(row.band_m) !== Number(band))
+        .concat(bandPredictions)
+        .sort((a, b) =>
+          Number(b.band_m || 0) - Number(a.band_m || 0)
+          || String(a.date_utc || "").localeCompare(String(b.date_utc || ""))
+          || Number(a.slot_index || 0) - Number(b.slot_index || 0)
+        );
+    }
+
+    async function buildFromFiles() {
+      try {
+        $("status").textContent = "Reading CSV files...";
+        const files = Array.from($("csvFiles").files || []);
+        $("selectedFileList").textContent = files.length ? files.map(f => f.name).join(", ") : "No files selected.";
+        const rawRows = await readSelectedFiles();
+        $("status").textContent = "Building feature rows and Europe bar-truth rows...";
+        const observedBars = buildObservedBarRows(rawRows);
+        const features = buildFeatureRows(rawRows);
+        const truth = buildEuropeBarTruthRows(features);
+        if (!observedBars.length) throw new Error("No Europe Loop 2 / Loop 3 rows found in the selected files.");
+        if (!truth.length) throw new Error("No Europe rows with usable Maidenhead grids found for model calculation.");
+        const reg = runBandRegressions(truth);
+        const dates = [...new Set(observedBars.map(r => r.date_utc))].sort();
+        app = {rawRows, features, observedBars, truth, ...reg, visualDate: dates[0] || "", activeTab: app.activeTab || "truth"};
+        renderAll();
+        $("status").textContent = `Loaded ${rawRows.length.toLocaleString()} raw rows from ${($("csvFiles").files || []).length} file(s).`;
+      } catch (err) {
+        console.error(err);
+        $("status").textContent = err.message || String(err);
+      }
+    }
+
+    function applyTrial(band) {
+      const beta = COEFFICIENTS.map(name => Number($(`trial_${band}_${name}`).value));
+      if (beta.some(v => !Number.isFinite(v))) {
+        $("status").textContent = `${band}m trial coefficients must all be valid numbers.`;
+        return;
+      }
+      const bandRows = app.truth.filter(row => Number(row.band_m) === Number(band));
+      const reg = runRegression(bandRows, beta);
+      app = {
+        ...app,
+        bandModels: {
+          ...app.bandModels,
+          [band]: {
+            ...(app.bandModels[band] || {}),
+            activeBeta: beta,
+            weightedR2: reg.weightedR2,
+            unweightedR2: reg.unweightedR2
+          }
+        },
+        predictions: replaceBandPredictions(app.predictions, band, reg.predictions)
+      };
+      renderAll(false);
+      $("status").textContent = `${band}m trial coefficients applied to that band chart and prediction table.`;
+    }
+
+    function copyModelToTrial(band) {
+      const model = app.bandModels[band] || {};
+      const beta = model.modelBeta || model.activeBeta;
+      if (!beta) return;
+      COEFFICIENTS.forEach((name, i) => {
+        $(`trial_${band}_${name}`).value = fmtSig(beta[i], 3);
+      });
+      updateTrialSteps(band);
+    }
+
+    function normalizeTrialInput(input) {
+      const value = Number(input.value);
+      if (Number.isFinite(value)) input.value = fmtSig(value, 3);
+      updateTrialStep(input);
+    }
+
+    function trialStepFor(value) {
+      const magnitude = Math.abs(Number(value));
+      const step = Math.max(magnitude * 0.05, 0.005);
+      return fmtSig(step, 2);
+    }
+
+    function updateTrialStep(input) {
+      const value = Number(input.value);
+      input.step = Number.isFinite(value) ? trialStepFor(value) : "0.01";
+    }
+
+    function updateTrialSteps(band = null) {
+      const inputs = band
+        ? COEFFICIENTS.map(name => $(`trial_${band}_${name}`))
+        : Array.from(document.querySelectorAll("[data-trial-coeff]"));
+      inputs.forEach(input => updateTrialStep(input));
+    }
+
+    function renderAll(copyTrial = true) {
+      renderVisualDateSelector();
+      renderMetrics();
+      renderCoefficients(copyTrial);
+      renderBandAnalysis();
+      renderVisualReport();
+      renderTable();
+      updateButtons();
+    }
+
+    function renderMetrics() {
+      $("rawCount").textContent = app.rawRows.length.toLocaleString();
+      $("featureCount").textContent = getEuropeFeatures().length.toLocaleString();
+      $("truthCount").textContent = app.truth.length.toLocaleString();
+      $("spotTotal").textContent = app.truth.reduce((sum, r) => sum + r.observation_count, 0).toLocaleString();
+      const dates = [...new Set(app.truth.map(r => r.date_utc))].sort();
+      $("dateRange").textContent = dates.length ? dates.join(", ") : "-";
+    }
+
+    function predictionByTruthKey() {
+      return new Map(app.predictions.map(row => [
+        `${row.date_utc}|${row.band_m}|${row.slot_index}`,
+        row
+      ]));
+    }
+
+    function diagnosticR2(rows, predByKey, pathKind = "all") {
+      const selected = rows.filter(row => {
+        if (pathKind === "short") return row.loop2_count > row.loop3_count;
+        if (pathKind === "long") return row.loop3_count > row.loop2_count;
+        return true;
+      });
+      const y = [];
+      const pred = [];
+      const weights = [];
+      selected.forEach(row => {
+        const item = predByKey.get(`${row.date_utc}|${row.band_m}|${row.slot_index}`);
+        if (!item) return;
+        if (pathKind === "short") {
+          y.push(row.loop2_count);
+          pred.push(item.model_predicted_loop2_count);
+        } else if (pathKind === "long") {
+          y.push(row.loop3_count);
+          pred.push(item.model_predicted_loop3_count);
+        } else {
+          y.push(row.path_dominance_score);
+          pred.push(item.simple_model_path_dominance_score);
+        }
+        weights.push(row.observation_count);
+      });
+      return {
+        bins: y.length,
+        spots: selected.reduce((sum, row) => sum + row.observation_count, 0),
+        r2: y.length >= 2 ? r2Score(y, pred, weights) : null
+      };
+    }
+
+    function renderBandAnalysis() {
+      const host = $("bandAnalysis");
+      if (!app.truth.length) {
+        host.innerHTML = "<p class=\"note\" style=\"padding:12px;\">No band analysis yet.</p>";
+        return;
+      }
+      const predByKey = predictionByTruthKey();
+      const rows = [];
+      BANDS.forEach(band => {
+        const bandRows = app.truth.filter(row => row.band_m === band);
+        if (!bandRows.length) return;
+        const short = diagnosticR2(bandRows, predByKey, "short");
+        const long = diagnosticR2(bandRows, predByKey, "long");
+        const beta = app.bandModels[band]?.modelBeta || null;
+        rows.push({band, path: "short-path evidence", ...short, beta});
+        rows.push({band, path: "long-path evidence", ...long, beta: null});
+      });
+      host.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Band</th><th>Evidence<br>set</th><th>Bins</th><th>Spots</th><th>Weighted<br>R2</th>
+              <th>Band-only<br>constant</th><th>Band-only<br>dark<br>coefficient</th>
+              <th>Band-only<br>grey-line<br>coefficient</th><th>Band-only<br>twilight<br>coefficient</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                <td>${row.band}m</td>
+                <td>${row.path}</td>
+                <td>${row.bins.toLocaleString()}</td>
+                <td>${row.spots.toLocaleString()}</td>
+                <td>${row.r2 === null ? "-" : fmtR2(row.r2)}</td>
+                <td>${row.beta ? fmtSig(row.beta[0], 3) : ""}</td>
+                <td>${row.beta ? fmtSig(row.beta[1], 3) : ""}</td>
+                <td>${row.beta ? fmtSig(row.beta[2], 3) : ""}</td>
+                <td>${row.beta ? fmtSig(row.beta[3], 3) : ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderVisualDateSelector() {
+      const select = $("visualDate");
+      const dates = [...new Set(app.observedBars.map(r => r.date_utc))].sort();
+      select.disabled = dates.length === 0;
+      select.innerHTML = dates.length
+        ? dates.map(d => `<option value="${d}">${d}</option>`).join("")
+        : `<option value="">Load data first</option>`;
+      if (!dates.includes(app.visualDate)) app.visualDate = dates[0] || "";
+      select.value = app.visualDate;
+    }
+
+    function renderCoefficients(copyTrial = true) {
+      const host = $("coefficientHost");
+      const availableBands = BANDS.filter(band => app.bandModels[band]);
+      if (!availableBands.length) {
+        host.innerHTML = `<p class="note">Model coefficients appear after data is loaded.</p>`;
+        return;
+      }
+      host.innerHTML = availableBands.map(band => {
+        const model = app.bandModels[band];
+        const modelBeta = model.modelBeta || [];
+        const activeBeta = model.activeBeta || modelBeta;
+        return `
+          <div class="band-workspace">
+            <div class="coeff-panel" data-band-panel="${band}">
+              <h3>${band}m Coefficients</h3>
+              <div class="coeff-grid">
+                <div></div>
+                <div class="coeff-head">Model</div>
+                <div class="coeff-head">Trial</div>
+                ${COEFFICIENTS.map((name, i) => `
+                  <div class="coeff-row">
+                    <label>${esc(coefficientLabel(name))}</label>
+                    <input id="model_${band}_${name}" value="${esc(fmtSig(modelBeta[i], 3))}" readonly>
+                    <input id="trial_${band}_${name}" type="number" value="${esc(fmtSig(activeBeta[i], 3))}" data-trial-coeff data-band="${band}">
+                  </div>
+                `).join("")}
+              </div>
+              <div class="actions">
+                <button class="secondary coeff-copy" type="button" data-band="${band}">Copy ${band}m Model To Trial</button>
+                <button class="secondary coeff-apply" type="button" data-band="${band}">Apply ${band}m Trial</button>
+              </div>
+            </div>
+            <div class="band-chart-host" id="chart_${band}"></div>
+          </div>
+        `;
+      }).join("");
+      updateTrialSteps();
+    }
+
+    function coefficientLabel(name) {
+      const labels = {
+        constant: "constant",
+        dark_delta: "dark_delta coefficient",
+        greyline_delta: "greyline_delta coefficient",
+        endpoint_twilight: "endpoint_twilight coefficient"
+      };
+      return labels[name] || name;
+    }
+
+    function updateButtons() {
+      const hasData = app.truth.length > 0;
+      ["exportTruth", "exportPredictions", "exportFeatures", "exportHtmlReport", "exportManifest"].forEach(id => {
+        $(id).disabled = !hasData;
+      });
+    }
+
+    function getVisualTruth() {
+      return app.visualDate ? app.truth.filter(row => row.date_utc === app.visualDate) : app.truth;
+    }
+
+    function getVisualObservedBars() {
+      return app.visualDate ? app.observedBars.filter(row => row.date_utc === app.visualDate) : app.observedBars;
+    }
+
+    function getEuropeFeatures() {
+      return app.features.filter(row => row.continent === "Europe");
+    }
+
+    function selectedDateFeatures() {
+      return getEuropeFeatures().filter(row => !app.visualDate || row.date_utc === app.visualDate);
+    }
+
+    function representativeBeaconForDate() {
+      const items = [];
+      for (const row of selectedDateFeatures()) {
+        try {
+          const [lat, lon] = maidenheadToLatLon(row.tx_grid);
+          items.push({lat, lon, weight: row.observation_count});
+        } catch {
+          // Ignore malformed grids in visual-only endpoint strip calculation.
+        }
+      }
+      const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+      if (!totalWeight) return null;
+      return {
+        lat: items.reduce((sum, item) => sum + item.lat * item.weight, 0) / totalWeight,
+        lon: items.reduce((sum, item) => sum + item.lon * item.weight, 0) / totalWeight
+      };
+    }
+
+    function slotDateTime(dateUtc, slotIndex) {
+      const [year, month, day] = String(dateUtc).split("-").map(Number);
+      return new Date(Date.UTC(year, month - 1, day, Math.floor(slotIndex / 2), slotIndex % 2 ? 30 : 0, 0, 0));
+    }
+
+    function aggregateVisualRows() {
+      const map = new Map();
+      const predictionByKey = new Map(app.predictions.map(row => [
+        `${row.date_utc}|${row.band_m}|${row.slot_index}`,
+        row
+      ]));
+      getVisualObservedBars().forEach((row) => {
+        const key = `${row.band_m}|${row.slot_index}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            band_m: row.band_m,
+            slot_index: row.slot_index,
+            utc_slot: row.utc_slot,
+            loop2: 0,
+            loop3: 0,
+            total: 0,
+            modelLoop2: 0,
+            modelLoop3: 0,
+            rxAltSum: 0,
+            txAltSum: 0,
+            greylineDeltaSum: 0
+          });
+        }
+        const item = map.get(key);
+        const predRow = predictionByKey.get(`${row.date_utc}|${row.band_m}|${row.slot_index}`);
+        item.loop2 += row.loop2;
+        item.loop3 += row.loop3;
+        item.total += row.loop2 + row.loop3;
+        item.modelLoop2 += predRow ? predRow.model_predicted_loop2_count : 0;
+        item.modelLoop3 += predRow ? predRow.model_predicted_loop3_count : 0;
+      });
+      getVisualTruth().forEach(row => {
+        const key = `${row.band_m}|${row.slot_index}`;
+        const item = map.get(key);
+        if (!item) return;
+        item.rxAltSum += row.rx_sun_altitude * row.observation_count;
+        item.txAltSum += row.tx_sun_altitude * row.observation_count;
+        item.greylineDeltaSum += row.greyline_delta * row.observation_count;
+      });
+      return Array.from(map.values()).map(item => ({
+        ...item,
+        rxAlt: item.total ? item.rxAltSum / item.total : 0,
+        txAlt: item.total ? item.txAltSum / item.total : 0,
+        greylineDelta: item.total ? item.greylineDeltaSum / item.total : 0,
+        dominance: item.total ? (item.loop2 - item.loop3) / item.total : 0,
+        modelDominance: item.total ? (item.modelLoop2 - item.modelLoop3) / item.total : 0
+      }));
+    }
+
+    function endpointColor(alt) {
+      if (alt < -6) return "#666666";
+      if (alt <= 6) return "#b8b8b8";
+      return "#fff7d6";
+    }
+
+    function confidenceColor(item) {
+      const score = confidenceScore(item);
+      if (score >= 3) return "#2e7d32";
+      if (score >= 2) return "#e3b505";
+      if (score >= 1) return "#d95f02";
+      return "#eceff4";
+    }
+
+    function confidenceScore(item) {
+      const share = Math.abs(item.dominance);
+      if (item.total <= 0 || share < 0.15) return 0;
+      const dominant = Math.max(item.loop2, item.loop3);
+      const probability = binomialTailEqualProbability(item.total, dominant);
+      if (item.total >= 10 && probability <= 0.01) return 3;
+      if (item.total >= 5 && probability <= 0.05) return 2;
+      if (probability <= 0.25) return 1;
+      return 0;
+    }
+
+    function confidenceProbability(item) {
+      if (item.total <= 0) return 1;
+      return binomialTailEqualProbability(item.total, Math.max(item.loop2, item.loop3));
+    }
+
+    function greylineOverlapColor(value) {
+      if (value >= 0.25) return "#1d4f91";
+      if (value >= 0.15) return "#7eb6e8";
+      return "#ffffff";
+    }
+
+    function referenceGreylineOverlap(dt) {
+      const [rxLat, rxLon] = maidenheadToLatLon(RX_GRID);
+      const [, , shortGreyline] = pathSolarFeatures(rxLat, rxLon, EUROPE_REFERENCE_LAT, EUROPE_REFERENCE_LON, dt, false);
+      const [, , longGreyline] = pathSolarFeatures(rxLat, rxLon, EUROPE_REFERENCE_LAT, EUROPE_REFERENCE_LON, dt, true);
+      return Math.min(shortGreyline, longGreyline);
+    }
+
+    function theoryDominanceClass(value) {
+      if (value >= 0.15) return "model-short";
+      if (value <= -0.15) return "model-long";
+      return "model-neutral";
+    }
+
+    function slotTimeLabel(slot) {
+      return `${String(Math.floor(slot / 2)).padStart(2, "0")}:${String((slot % 2) * 30).padStart(2, "0")}`;
+    }
+
+    function reportDateLabel() {
+      if (app.visualDate) return app.visualDate;
+      const dates = [...new Set(app.observedBars.map(r => r.date_utc))].sort();
+      if (!dates.length) return "selected dates";
+      if (dates.length === 1) return dates[0];
+      return `${dates[0]} to ${dates[dates.length - 1]}`;
+    }
+
+    function renderVisualReport() {
+      if (!app.truth.length) {
+        $("visualSubtitle").textContent = "Load data to build the chart.";
+        return;
+      }
+      const rows = aggregateVisualRows();
+      const byBand = new Map();
+      rows.forEach(row => {
+        if (!byBand.has(row.band_m)) byBand.set(row.band_m, []);
+        byBand.get(row.band_m).push(row);
+      });
+      $("visualSubtitle").textContent = `${$("pathName").value || "Brisbane QG62LR <> Europe"} - ${app.visualDate || "selected date"}`;
+      BANDS.forEach(band => {
+        const host = $(`chart_${band}`);
+        if (host) host.innerHTML = renderBandChart(band, byBand.get(band) || []);
+      });
+    }
+
+    function renderBandChart(band, rows) {
+      const rowBySlot = new Map(rows.map(r => [r.slot_index, r]));
+      const width = 1320;
+      const height = 530;
+      const left = 172;
+      const right = 24;
+      const top = 36;
+      const plotH = 250;
+      const timelineH = 18;
+      const timelineGap = 10;
+      const plotW = width - left - right;
+      const slotW = plotW / 48;
+      const barW = Math.max(2, slotW * 0.16);
+      const [rxLat, rxLon] = maidenheadToLatLon(RX_GRID);
+      const bandRows = [];
+
+      for (let slot = 0; slot < 48; slot++) {
+        const item = rowBySlot.get(slot) || {
+          band_m: band,
+          slot_index: slot,
+          utc_slot: slotTimeLabel(slot),
+          loop2: 0,
+          loop3: 0,
+          total: 0,
+          modelLoop2: 0,
+          modelLoop3: 0,
+          greylineDelta: 0,
+          dominance: 0,
+          modelDominance: 0
+        };
+        bandRows.push(item);
+      }
+
+      const maxValue = Math.max(1, ...bandRows.flatMap(r => [
+        r.loop2,
+        r.loop3,
+        Math.max(r.modelLoop2, r.modelLoop3)
+      ]));
+      const tickStep = Math.max(1, Math.ceil(maxValue / 4));
+      const ticks = [];
+      for (let tick = 0; tick <= Math.ceil(maxValue); tick += tickStep) {
+        const y = top + plotH - (tick / maxValue) * plotH;
+        ticks.push(`<line x1="${left}" y1="${y.toFixed(2)}" x2="${left + plotW}" y2="${y.toFixed(2)}" class="grid"/>`);
+        ticks.push(`<text x="${left - 8}" y="${(y + 4).toFixed(2)}" text-anchor="end" class="tick">${tick}</text>`);
+      }
+
+      const bars = [];
+      for (let slot = 0; slot < 48; slot++) {
+        const item = bandRows[slot];
+        const x = left + slot * slotW;
+        const modelIsShort = item.modelDominance >= 0;
+        const values = [
+          ["obs-short", item.loop2, "Loop 2", "short-path", false],
+          [theoryDominanceClass(item.modelDominance), Math.max(item.modelLoop2, item.modelLoop3), "model", modelIsShort ? "short-path" : "long-path", true],
+          ["obs-long", item.loop3, "Loop 3", "long-path", false]
+        ];
+        values.forEach(([klass, value, source, pathLabel, isModel], offset) => {
+          const h = (value / maxValue) * plotH;
+          const spotLabel = isModel ? String(Math.round(value)) : fmtSig(value);
+          bars.push(
+            `<rect x="${(x + slotW * 0.18 + offset * barW * 1.26).toFixed(2)}" ` +
+            `y="${(top + plotH - h).toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" class="${klass}">` +
+            `<title>${slotTimeLabel(slot)}, ${source}, ${pathLabel}, ${spotLabel} spots</title></rect>`
+          );
+        });
+        if (slot % 2 === 0) {
+          bars.push(`<text x="${(x + slotW / 2).toFixed(2)}" y="${top + plotH + 18}" text-anchor="middle" class="tick">${String(slot / 2).padStart(2, "0")}</text>`);
+        }
+      }
+
+      const timelineY = top + plotH + 86;
+      const timelineSpecs = [
+        ["Dominance confidence", "confidence"],
+        ["Receiver Brisbane", "rx_sun_altitude"],
+        ["Beacon Europe", "tx_sun_altitude"],
+        ["Path grey-line overlap", "greyline_overlap"]
+      ];
+      const timelines = [];
+      timelineSpecs.forEach(([label, key], lineNo) => {
+        const y = timelineY + lineNo * (timelineH + timelineGap);
+        timelines.push(`<text x="${left - 8}" y="${y + 13}" text-anchor="end" class="strip-label">${esc(label)}</text>`);
+        for (let slot = 0; slot < 48; slot++) {
+          const item = bandRows[slot];
+          const dt = app.visualDate ? slotDateTime(app.visualDate, slot) : null;
+          let color = "#f5f7fa";
+          let title = `${slotTimeLabel(slot)} UTC, no Europe observations in this bin`;
+          if (key === "rx_sun_altitude") {
+            const alt = dt ? solarAltitudeDeg(rxLat, rxLon, dt) : 0;
+            color = endpointColor(alt);
+            title = `${slotTimeLabel(slot)} UTC, receiver solar altitude ${alt.toFixed(1)} deg`;
+          } else if (key === "tx_sun_altitude") {
+            const alt = dt ? solarAltitudeDeg(EUROPE_REFERENCE_LAT, EUROPE_REFERENCE_LON, dt) : 0;
+            color = endpointColor(alt);
+            title = `${slotTimeLabel(slot)} UTC, Europe reference solar altitude ${alt.toFixed(1)} deg`;
+          } else if (key === "confidence") {
+            color = confidenceColor(item);
+            title = `${slotTimeLabel(slot)}, Confidence ${Math.round(confidenceScore(item))}`;
+          } else if (key === "greyline_overlap") {
+            const overlap = dt ? referenceGreylineOverlap(dt) : 0;
+            color = greylineOverlapColor(overlap);
+            title = `${slotTimeLabel(slot)} UTC, ${label}: ${fmtSig(overlap)}`;
+          }
+          const x = left + slot * slotW;
+          timelines.push(
+            `<rect x="${x.toFixed(2)}" y="${y}" width="${(slotW + 0.2).toFixed(2)}" height="${timelineH}" fill="${color}">` +
+            `<title>${esc(title)}</title></rect>`
+          );
+        }
+      });
+
+      return `
+        <div class="band-section">
+          <svg class="regression-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${band}m regression visual story">
+            <text x="${left}" y="22" class="chart-title">${band}m observed loop evidence versus simple regression model for ${esc(reportDateLabel())}</text>
+            <line x1="${left}" y1="${top + plotH}" x2="${left + plotW}" y2="${top + plotH}" class="axis"/>
+            <line x1="${left}" y1="${top}" x2="${left}" y2="${top + plotH}" class="axis"/>
+            <text x="8" y="${top + 14}" class="axis-label">spots</text>
+            ${ticks.join("")}
+            ${bars.join("")}
+            <text x="${(left + plotW / 2).toFixed(2)}" y="${top + plotH + 34}" text-anchor="middle" class="axis-label">UTC</text>
+            <text x="${left}" y="${timelineY - 14}" class="equation">The model calculates path conditions with attempt to reproduce the observed antenna direction.</text>
+            ${timelines.join("")}
+          </svg>
+        </div>`;
+    }
+
+    function renderTable() {
+      const host = $("tableHost");
+      let rows, fields;
+      if (app.activeTab === "features") {
+        rows = getEuropeFeatures();
+        fields = FEATURE_FIELDS;
+      } else if (app.activeTab === "predictions") {
+        rows = app.predictions;
+        fields = PREDICTION_FIELDS;
+      } else {
+        rows = app.truth;
+        fields = TRUTH_FIELDS;
+      }
+      if (!rows.length) {
+        host.innerHTML = "<p class=\"note\" style=\"padding:12px;\">No rows yet.</p>";
+        return;
+      }
+      const sorted = rows.slice().sort((a, b) =>
+        Number(b.band_m || 0) - Number(a.band_m || 0)
+        || String(a.date_utc || "").localeCompare(String(b.date_utc || ""))
+        || Number(a.slot_index || 0) - Number(b.slot_index || 0)
+      );
+      const byBand = new Map();
+      sorted.forEach(row => {
+        const band = Number(row.band_m) || 0;
+        if (!byBand.has(band)) byBand.set(band, []);
+        byBand.get(band).push(row);
+      });
+      host.innerHTML = BANDS.filter(band => byBand.has(band)).map(band => `
+        <h3 style="padding:10px 10px 0;">${band}m ${tableTitle()}</h3>
+        <table>
+          <thead><tr>${fields.map(f => `<th>${headerLabel(f)}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${byBand.get(band).map(row => `<tr>${fields.map(f => `<td>${formatCell(row[f])}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `).join("");
+    }
+
+    function tableTitle() {
+      if (app.activeTab === "features") return "feature rows";
+      if (app.activeTab === "predictions") return "regression predictions";
+      return "bar truth";
+    }
+
+    function headerLabel(field) {
+      return esc(field).split("_").join("<br>");
+    }
+
+    function formatCell(value) {
+      if (typeof value === "number") {
+        if (Number.isInteger(value)) return value.toLocaleString();
+        return fmtSig(value, 3);
+      }
+      return String(value ?? "");
+    }
+
+    function toCsv(rows, fields) {
+      const escapeCell = (value) => {
+        if (typeof value === "number" && !Number.isInteger(value)) value = fmtSig(value, 3);
+        const s = String(value ?? "");
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      return [fields.join(",")].concat(rows.map(row => fields.map(f => escapeCell(row[f])).join(","))).join("\n");
+    }
+
+    function downloadText(filename, text) {
+      const type = filename.endsWith(".html") ? "text/html;charset=utf-8" : filename.endsWith(".md") ? "text/markdown;charset=utf-8" : "text/csv;charset=utf-8";
+      const blob = new Blob([text], {type});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCsv(kind) {
+      const dates = [...new Set(app.truth.map(r => r.date_utc))].sort();
+      const datePart = dates.length === 1 ? dates[0] : dates.length ? `${dates[0]}_${dates[dates.length - 1]}` : "no_date";
+      const configs = {
+        truth: {
+          stem: "europe_bar_truth",
+          rows: app.truth,
+          fields: TRUTH_FIELDS
+        },
+        predictions: {
+          stem: "europe_regression_predictions",
+          rows: app.predictions,
+          fields: PREDICTION_FIELDS
+        },
+        features: {
+          stem: "wspr_path_features",
+          rows: getEuropeFeatures(),
+          fields: FEATURE_FIELDS
+        }
+      };
+      const config = configs[kind];
+      if (!config) return;
+      BANDS.forEach((band, index) => {
+        const bandRows = config.rows
+          .filter(row => Number(row.band_m) === band)
+          .sort((a, b) =>
+            String(a.date_utc || "").localeCompare(String(b.date_utc || ""))
+            || Number(a.slot_index || 0) - Number(b.slot_index || 0)
+          );
+        if (!bandRows.length) return;
+        const filename = `long_path_${band}m_${config.stem}_${datePart}.csv`;
+        setTimeout(() => downloadText(filename, toCsv(bandRows, config.fields)), index * 250);
+      });
+    }
+
+    function exportHtmlReport() {
+      const dates = [...new Set(app.truth.map(r => r.date_utc))].sort();
+      const datePart = dates.length === 1 ? dates[0] : dates.length ? `${dates[0]}_${dates[dates.length - 1]}` : "no_date";
+      const doc = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Long-Path WSPR Browser Report</title>
+<style>${document.querySelector("style").textContent}</style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>Long-Path WSPR Browser Report</h1>
+    <p>Generated ${esc(new Date().toISOString())}. Path: ${esc($("pathName").value || "Brisbane QG62LR <> Europe")}.</p>
+  </section>
+  <section>
+    <h2>Run Summary</h2>
+    <div class="grid summary-grid">
+      <div class="metric"><strong>${esc($("rawCount").textContent)}</strong><span>Raw rows loaded</span></div>
+      <div class="metric"><strong>${esc($("featureCount").textContent)}</strong><span>Feature rows</span></div>
+      <div class="metric"><strong>${esc($("truthCount").textContent)}</strong><span>Europe bar-truth rows</span></div>
+      <div class="metric"><strong>${esc($("dateRange").textContent)}</strong><span>UTC dates</span></div>
+      <div class="metric"><strong>${esc($("spotTotal").textContent)}</strong><span>Europe observations</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Band Analysis Summary</h2>
+    <p>Each band and each path are checked independently. A blended R2 made by merging both paths is not used.</p>
+    ${$("bandAnalysis").innerHTML}
+  </section>
+  <section>
+    <h2>Band Models And Charts</h2>
+    ${$("coefficientHost").innerHTML}
+  </section>
+</main>
+</body>
+</html>`;
+      downloadText(`long_path_browser_report_${datePart}.html`, doc);
+    }
+
+    function exportManifest() {
+      const dates = [...new Set(app.truth.map(r => r.date_utc))].sort();
+      const datePart = dates.length === 1 ? dates[0] : dates.length ? `${dates[0]}_${dates[dates.length - 1]}` : "no_date";
+      const bands = BANDS.filter(band => app.truth.some(row => Number(row.band_m) === band));
+      const text = [
+        "# Long-Path Browser Export Manifest",
+        "",
+        `Generated: ${new Date().toISOString()}`,
+        `Dates: ${dates.join(", ") || "none"}`,
+        `Bands: ${bands.map(band => `${band}m`).join(", ") || "none"}`,
+        "",
+        "## Export Files",
+        "",
+        "- `long_path_browser_report_DATE.html`: self-contained browser report matching the reviewed on-screen sections.",
+        "- `long_path_40m_europe_bar_truth_DATE.csv`, `long_path_30m_europe_bar_truth_DATE.csv`, `long_path_20m_europe_bar_truth_DATE.csv`: per-band bar truth exports.",
+        "- `long_path_40m_europe_regression_predictions_DATE.csv`, etc.: per-band prediction exports.",
+        "- `long_path_40m_wspr_path_features_DATE.csv`, etc.: per-band Europe feature-row exports.",
+        "",
+        "## Notes",
+        "",
+        "- Short-path and long-path evidence are reviewed separately.",
+        "- A blended R2 made by merging both paths is not used.",
+        "- `enhanced_model_path_dominance_score` is a diagnostic model using additional terms; it is not the primary simple model explanation."
+      ].join("\\n");
+      downloadText(`long_path_export_manifest_${datePart}.md`, text);
+    }
+
+    function updateSelectedFileList() {
+      const files = Array.from($("csvFiles").files || []);
+      $("selectedFileList").textContent = files.length ? files.map(f => f.name).join(", ") : "No files selected.";
+    }
+
+    $("btnBuild").addEventListener("click", buildFromFiles);
+    $("btnSample").addEventListener("click", buildFromFiles);
+    $("csvFiles").addEventListener("change", updateSelectedFileList);
+    $("coefficientHost").addEventListener("click", event => {
+      const button = event.target.closest("button[data-band]");
+      if (!button) return;
+      const band = Number(button.dataset.band);
+      if (button.classList.contains("coeff-copy")) copyModelToTrial(band);
+      if (button.classList.contains("coeff-apply")) applyTrial(band);
+    });
+    $("coefficientHost").addEventListener("input", event => {
+      if (event.target.matches("[data-trial-coeff]")) updateTrialStep(event.target);
+    });
+    $("coefficientHost").addEventListener("change", event => {
+      if (event.target.matches("[data-trial-coeff]")) normalizeTrialInput(event.target);
+    });
+    $("coefficientHost").addEventListener("blur", event => {
+      if (event.target.matches("[data-trial-coeff]")) normalizeTrialInput(event.target);
+    }, true);
+    $("exportTruth").addEventListener("click", () => exportCsv("truth"));
+    $("exportPredictions").addEventListener("click", () => exportCsv("predictions"));
+    $("exportFeatures").addEventListener("click", () => exportCsv("features"));
+    $("exportHtmlReport").addEventListener("click", exportHtmlReport);
+    $("exportManifest").addEventListener("click", exportManifest);
+    $("printReport").addEventListener("click", () => window.print());
+    $("visualDate").addEventListener("change", () => {
+      app.visualDate = $("visualDate").value;
+      renderVisualReport();
+    });
+
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        app.activeTab = btn.dataset.tab;
+        renderTable();
+      });
+    });
+  </script>
+</body>
+</html>
