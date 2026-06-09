@@ -46,7 +46,8 @@ def format_sig(value: float, digits: int = 3) -> str:
     magnitude = abs(value)
     if 0.001 <= magnitude < 1_000_000:
         places = max(0, digits - int(math.floor(math.log10(magnitude))) - 1)
-        return f"{value:.{places}f}".rstrip("0").rstrip(".")
+        text = f"{value:.{places}f}"
+        return text.rstrip("0").rstrip(".") if "." in text else text
     return f"{value:.{digits}g}"
 
 
@@ -339,6 +340,21 @@ class EuropeRegressionPredictionRow:
     enhanced_residual: float
     model_predicted_loop2_count: float
     model_predicted_loop3_count: float
+
+@dataclass(frozen=True)
+class PathRegressionResult:
+    path_id: str
+    beta: list[float] | None
+    weighted_r2: float | None
+    unweighted_r2: float | None
+    rows: list[EuropeBarTruthRow]
+
+
+@dataclass(frozen=True)
+class BandRegressionResult:
+    band_m: int
+    paths: dict[str, PathRegressionResult]
+    rows: list[EuropeBarTruthRow]
 
 
 def maidenhead_to_latlon(grid: str) -> tuple[float, float]:
@@ -1280,17 +1296,84 @@ def fit_europe_bar_regression(
     return beta, pred, y, weights
 
 
+def truth_row_key(row: EuropeBarTruthRow) -> tuple[str, int]:
+    return row.date_utc, row.slot_index
+
+
+def path_training_rows(rows: list[EuropeBarTruthRow], path_id: str) -> list[EuropeBarTruthRow]:
+    if path_id not in {"short", "long"}:
+        raise ValueError(f"Unknown path_id: {path_id}")
+    return [row for row in rows if row.observation_count > 0]
+
+
+def path_target_share(row: EuropeBarTruthRow, path_id: str) -> float:
+    if path_id == "short":
+        return row.loop2_count / row.observation_count
+    if path_id == "long":
+        return row.loop3_count / row.observation_count
+    raise ValueError(f"Unknown path_id: {path_id}")
+
+
+def fit_path_regression(rows: list[EuropeBarTruthRow], path_id: str) -> PathRegressionResult:
+    training_rows = path_training_rows(rows, path_id)
+    if len(training_rows) < len(simple_europe_regression_names()):
+        return PathRegressionResult(path_id, None, None, None, training_rows)
+    x = [simple_europe_regression_vector(row) for row in training_rows]
+    y = [path_target_share(row, path_id) for row in training_rows]
+    weights = [float(row.observation_count) for row in training_rows]
+    beta = fit_wls(x, y, weights)
+    pred = predict(x, beta)
+    return PathRegressionResult(
+        path_id=path_id,
+        beta=beta,
+        weighted_r2=r2_score(y, pred, weights),
+        unweighted_r2=r2_score(y, pred),
+        rows=training_rows,
+    )
+
+
+def fit_band_simple_regressions(rows: list[EuropeBarTruthRow]) -> dict[int, BandRegressionResult]:
+    results: dict[int, BandRegressionResult] = {}
+    for band in sorted({row.band_m for row in rows}):
+        band_rows = [row for row in rows if row.band_m == band]
+        results[band] = BandRegressionResult(
+            band_m=band,
+            paths={
+                "short": fit_path_regression(band_rows, "short"),
+                "long": fit_path_regression(band_rows, "long"),
+            },
+            rows=band_rows,
+        )
+    return results
+
+
+def predict_path_share(row: EuropeBarTruthRow, beta: list[float] | None) -> float:
+    if not beta:
+        return 0.0
+    return clamp(sum(value * beta[i] for i, value in enumerate(simple_europe_regression_vector(row))), 0.0, 1.0)
+
+
+def band_prediction_list(rows: list[EuropeBarTruthRow], band_models: dict[int, BandRegressionResult]) -> list[float]:
+    out: list[float] = []
+    for row in rows:
+        model = band_models[row.band_m]
+        predicted_loop2 = row.observation_count * predict_path_share(row, model.paths["short"].beta)
+        predicted_loop3 = row.observation_count * predict_path_share(row, model.paths["long"].beta)
+        out.append((predicted_loop2 - predicted_loop3) / row.observation_count if row.observation_count else 0.0)
+    return out
+
+
 def build_europe_regression_prediction_rows(
     rows: list[EuropeBarTruthRow],
+    band_models: dict[int, BandRegressionResult],
     simple_pred: list[float],
     enhanced_pred: list[float],
 ) -> list[EuropeRegressionPredictionRow]:
     out: list[EuropeRegressionPredictionRow] = []
     for row, simple, enhanced in zip(rows, simple_pred, enhanced_pred):
-        clipped = clamp(simple, -1.0, 1.0)
-        loop2_share = (clipped + 1.0) / 2.0
-        predicted_loop2 = row.observation_count * loop2_share
-        predicted_loop3 = row.observation_count - predicted_loop2
+        model = band_models[row.band_m]
+        predicted_loop2 = row.observation_count * predict_path_share(row, model.paths["short"].beta)
+        predicted_loop3 = row.observation_count * predict_path_share(row, model.paths["long"].beta)
         out.append(EuropeRegressionPredictionRow(
             date_utc=row.date_utc,
             utc_slot=row.utc_slot,
@@ -1323,7 +1406,7 @@ def write_europe_regression_predictions_csv(rows: list[EuropeRegressionPredictio
 
 def write_europe_regression_report(
     truth_rows: list[EuropeBarTruthRow],
-    simple_beta: list[float],
+    band_models: dict[int, BandRegressionResult],
     simple_pred: list[float],
     enhanced_beta: list[float],
     enhanced_pred: list[float],
@@ -1370,8 +1453,8 @@ def write_europe_regression_report(
     lines.append("### Simple Interpretable Model")
     lines.append("")
     lines.append("- Features: dark-delta, greyline-delta, endpoint-twilight.")
-    lines.append(f"- Weighted R2: {format_review_r2(r2_score(y, simple_pred, weights))}")
-    lines.append(f"- Unweighted R2: {format_review_r2(r2_score(y, simple_pred))}")
+    lines.append("- Coefficients are fitted independently for each band and each path.")
+    lines.append("- Combined all-band or combined-path coefficient sets are not reported.")
     lines.append("")
     lines.append("### Enhanced Diagnostic Model")
     lines.append("")
@@ -1381,24 +1464,42 @@ def write_europe_regression_report(
     lines.append("")
     lines.append("Important caution: this is an in-sample fit. A high R2 means the model can reproduce the known bar-chart truth for the supplied files; it is not yet proof of predictive performance on withheld dates.")
     lines.append("")
-    lines.append("## Simple Model Coefficients")
-    for name, coef in zip(simple_europe_regression_names(), simple_beta):
-        lines.append(f"- `{name}`: {format_sig(coef)}")
+    lines.append("## Band And Path Simple Model Coefficients")
     lines.append("")
+    for band in sorted(by_band):
+        result = band_models[band]
+        lines.append(f"### {band}m")
+        for path_id, label in [("short", "Short-path model"), ("long", "Long-path model")]:
+            path_result = result.paths[path_id]
+            lines.append(f"#### {label}")
+            if path_result.beta is None:
+                lines.append(f"- Insufficient bins: {len(path_result.rows)}")
+                continue
+            lines.append(f"- Weighted R2: {format_review_r2(path_result.weighted_r2 or 0.0)}")
+            lines.append(f"- Unweighted R2: {format_review_r2(path_result.unweighted_r2 or 0.0)}")
+            for name, coef in zip(simple_europe_regression_names(), path_result.beta):
+                lines.append(f"- `{name}`: {format_sig(coef)}")
+        lines.append("")
     lines.append("## Enhanced Model Coefficients")
     for name, coef in zip(enhanced_europe_regression_names(), enhanced_beta):
         lines.append(f"- `{name}`: {format_sig(coef)}")
     lines.append("")
-    lines.append("## Band-Level Simple Model Check")
+    lines.append("## Band And Path Simple Model Check")
     lines.append("")
     for band in sorted(by_band):
         band_rows = [row for row in truth_rows if row.band_m == band]
-        beta, pred, band_y, band_weights = fit_europe_bar_regression(band_rows, simple_europe_regression_vector)
         lines.append(f"### {band}m")
-        lines.append(f"- Weighted R2: {format_review_r2(r2_score(band_y, pred, band_weights))}")
-        lines.append(f"- Unweighted R2: {format_review_r2(r2_score(band_y, pred))}")
-        for name, coef in zip(simple_europe_regression_names(), beta):
-            lines.append(f"- `{name}`: {format_sig(coef)}")
+        for path_id, label in [("short", "Short-path evidence"), ("long", "Long-path evidence")]:
+            path_rows = path_training_rows(band_rows, path_id)
+            if len(path_rows) < 2:
+                lines.append(f"- {label}: insufficient bins ({len(path_rows)})")
+                continue
+            path_result = band_models[band].paths[path_id]
+            pred_path = [row.observation_count * predict_path_share(row, path_result.beta) for row in path_rows]
+            y_path = [row.loop2_count if path_id == "short" else row.loop3_count for row in path_rows]
+            weights_path = [float(row.observation_count) for row in path_rows]
+            spots_path = sum((row.loop2_count if path_id == "short" else row.loop3_count) for row in path_rows)
+            lines.append(f"- {label}: {len(path_rows):,} bins, {spots_path:,} path spots, weighted R2 {format_review_r2(r2_score(y_path, pred_path, weights_path))}")
         lines.append("")
     lines.append("## Output Files")
     lines.append("")
@@ -1424,21 +1525,23 @@ def describe_delta(value: float) -> str:
 
 def aggregate_regression_visual_rows(
     truth_rows: list[EuropeBarTruthRow],
-    simple_pred: list[float],
+    prediction_rows: list[EuropeRegressionPredictionRow],
 ) -> dict[int, dict[int, dict[str, float]]]:
     grouped: dict[int, dict[int, dict[str, float]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
-    for row, pred in zip(truth_rows, simple_pred):
+    prediction_by_key = {
+        (row.date_utc, row.band_m, row.slot_index): row
+        for row in prediction_rows
+    }
+    for row in truth_rows:
+        pred = prediction_by_key[(row.date_utc, row.band_m, row.slot_index)]
         item = grouped[row.band_m][row.slot_index]
         item["loop2"] += row.loop2_count
         item["loop3"] += row.loop3_count
         item["observation_count"] += row.observation_count
-        clipped = clamp(pred, -1.0, 1.0)
-        dominant_theory = row.observation_count * abs(clipped)
-        item["model_dominant"] += dominant_theory
-        if clipped > 0:
-            item["model_short_dominant"] += dominant_theory
-        elif clipped < 0:
-            item["model_long_dominant"] += dominant_theory
+        dominant_model = max(pred.model_predicted_loop2_count, pred.model_predicted_loop3_count)
+        item["model_dominant"] += dominant_model
+        item["model_short_dominant"] += pred.model_predicted_loop2_count
+        item["model_long_dominant"] += pred.model_predicted_loop3_count
         item["dark_delta_sum"] += row.dark_delta * row.observation_count
         item["greyline_delta_sum"] += row.greyline_delta * row.observation_count
         item["endpoint_twilight_sum"] += row.endpoint_twilight_score * row.observation_count
@@ -1562,7 +1665,7 @@ def format_review_r2(value: float) -> str:
 def svg_regression_story_chart(
     band_m: int,
     slots: dict[int, dict[str, float]],
-    simple_beta: list[float],
+    band_beta: list[float],
     dates: list[str],
 ) -> str:
     width = 1320
@@ -1679,11 +1782,11 @@ def svg_regression_story_chart(
 
 def write_europe_regression_visual_report_html(
     truth_rows: list[EuropeBarTruthRow],
-    simple_beta: list[float],
-    simple_pred: list[float],
+    band_models: dict[int, BandRegressionResult],
+    prediction_rows: list[EuropeRegressionPredictionRow],
     path: Path,
 ) -> None:
-    grouped = aggregate_regression_visual_rows(truth_rows, simple_pred)
+    grouped = aggregate_regression_visual_rows(truth_rows, prediction_rows)
     dates = sorted({row.date_utc for row in truth_rows})
     y = [row.path_dominance_score for row in truth_rows]
     weights = [float(row.observation_count) for row in truth_rows]
@@ -1692,29 +1795,22 @@ def write_europe_regression_visual_report_html(
         if band not in grouped:
             continue
         band_rows = [row for row in truth_rows if row.band_m == band]
-        band_pred = [pred for row, pred in zip(truth_rows, simple_pred) if row.band_m == band]
-        short_rows = [(row, pred) for row, pred in zip(band_rows, band_pred) if row.loop2_count > row.loop3_count]
-        long_rows = [(row, pred) for row, pred in zip(band_rows, band_pred) if row.loop3_count > row.loop2_count]
-        beta_band, _pred_band, _y_band, _weights_band = fit_europe_bar_regression(
-            band_rows,
-            simple_europe_regression_vector,
-        )
+        short_beta = band_models[band].paths["short"].beta
+        long_beta = band_models[band].paths["long"].beta
 
-        def path_r2_summary(items: list[tuple[EuropeBarTruthRow, float]]) -> tuple[str, int, int]:
+        def path_r2_summary(path_id: str) -> tuple[str, int, int]:
+            items = path_training_rows(band_rows, path_id)
+            spots_path = sum((row.loop2_count if path_id == "short" else row.loop3_count) for row in items)
             if len(items) < 2:
-                return "-", len(items), sum(row.observation_count for row, _pred in items)
-            if items and items[0][0].loop2_count > items[0][0].loop3_count:
-                y_path = [row.loop2_count for row, _pred in items]
-                pred_path = [row.observation_count * ((max(-1.0, min(1.0, pred)) + 1.0) / 2.0) for row, pred in items]
-            else:
-                y_path = [row.loop3_count for row, _pred in items]
-                pred_path = [row.observation_count * (1.0 - ((max(-1.0, min(1.0, pred)) + 1.0) / 2.0)) for row, pred in items]
-            weights_path = [float(row.observation_count) for row, _pred in items]
-            spots_path = sum(row.observation_count for row, _pred in items)
+                return "-", len(items), spots_path
+            beta = band_models[band].paths[path_id].beta
+            y_path = [row.loop2_count if path_id == "short" else row.loop3_count for row in items]
+            pred_path = [row.observation_count * predict_path_share(row, beta) for row in items]
+            weights_path = [float(row.observation_count) for row in items]
             return format_review_r2(r2_score(y_path, pred_path, weights_path)), len(items), spots_path
 
-        short_r2, short_bins, short_spots = path_r2_summary(short_rows)
-        long_r2, long_bins, long_spots = path_r2_summary(long_rows)
+        short_r2, short_bins, short_spots = path_r2_summary("short")
+        long_r2, long_bins, long_spots = path_r2_summary("long")
         sections.append(f"<section><h2>{band}m Band</h2>")
         sections.append(
             "<table><thead><tr><th>Evidence set</th><th>Bins</th><th>Spots</th><th>Weighted R2</th></tr></thead><tbody>"
@@ -1722,44 +1818,23 @@ def write_europe_regression_visual_report_html(
             f"<tr><td>Long-path evidence</td><td>{long_bins:,}</td><td>{long_spots:,}</td><td>{long_r2}</td></tr>"
             "</tbody></table>"
         )
-        sections.append(
-            "<p><strong>Band-only coefficients:</strong> "
-            + ", ".join(
-                f"{html.escape(name)} {format_sig(coef)}"
-                for name, coef in zip(simple_europe_regression_names(), beta_band)
-            )
-            + ".</p>"
-        )
-        sections.append(svg_regression_story_chart(band, grouped[band], simple_beta, dates))
+        for label, beta in [("Short-path coefficients", short_beta), ("Long-path coefficients", long_beta)]:
+            if beta is None:
+                sections.append(f"<p><strong>{label}:</strong> insufficient path bins.</p>")
+            else:
+                sections.append(
+                    f"<p><strong>{label}:</strong> "
+                    + ", ".join(
+                        f"{html.escape(name)} {format_sig(coef)}"
+                        for name, coef in zip(simple_europe_regression_names(), beta)
+                    )
+                    + ".</p>"
+                )
+        sections.append(svg_regression_story_chart(band, grouped[band], [], dates))
         sections.append("</section>")
 
     example = ""
-    if truth_rows:
-        row = max(truth_rows, key=lambda item: item.observation_count)
-        antenna_score = row.path_dominance_score
-        dominance_numerator = row.loop2_count - row.loop3_count
-        dominance_denominator = row.loop2_count + row.loop3_count
-        if row.loop2_count > row.loop3_count:
-            evidence_sentence = "In this bin, Loop 2 has the higher spot count, so the antenna evidence favours short-path propagation."
-        elif row.loop3_count > row.loop2_count:
-            evidence_sentence = "In this bin, Loop 3 has the higher spot count, so the antenna evidence favours long-path propagation."
-        else:
-            evidence_sentence = "In this bin, Loop 2 and Loop 3 have equal spot counts, so the antenna evidence does not favour either path."
-        example = f"""
-<section>
-<h2>Worked Example</h2>
-<p>This example uses {html.escape(row.date_utc)} at {html.escape(row.utc_slot)} UTC on {row.band_m}m at end-points Brisbane &lt;&gt; Frankfurt.</p>
-<p>Source of numbers: the <code>Europe Bar Truth</code> table for this same date, UTC slot, and band.</p>
-<div class="example">
-path_dominance_score = (Loop2_count - Loop3_count) / (Loop2_count + Loop3_count)<br>
-path_dominance_score = ({row.loop2_count:,} - {row.loop3_count:,}) / ({row.loop2_count:,} + {row.loop3_count:,})<br>
-path_dominance_score = {dominance_numerator:,} / {dominance_denominator:,}<br>
-path_dominance_score = {antenna_score:.3f}
-</div>
-<p>{html.escape(evidence_sentence)} The model then attempts to reproduce this antenna evidence using calculated path conditions. If the model agrees well with the antenna observations, the model may be useful. If it does not agree well, the model needs more work.</p>
-<p>The long-term aim is for a station without directional antennas to use a validated model as an indication of likely long-path or likely short-path propagation.</p>
-</section>
-"""
+
 
     doc = f"""<!doctype html>
 <html lang="en">
@@ -1847,7 +1922,7 @@ def write_export_manifest(
         "",
         "## Current Reviewer Files",
         "",
-        "- `reviewer_package/visual_report.html`: visual reviewer report with band/path R2, charts, sandwich strips, and a worked example.",
+        "- `reviewer_package/visual_report.html`: visual reviewer report with band/path R2, charts, and sandwich strips.",
         "- `reviewer_package/project_about.md`: project explanation and Q&A.",
         "- `reviewer_package/report_index.html`: simple landing page linking the reviewer files and data files.",
         "",
@@ -1889,7 +1964,7 @@ def write_reviewer_package_index_html(out_dir: Path) -> None:
 <p>Generated {html.escape(generated_utc_label())}.</p>
 <h2>Start Here</h2>
 <ul>
-  <li><a href="visual_report.html">visual_report.html</a>: visual report, worked example, charts, sandwich strips, and band/path R2.</li>
+  <li><a href="visual_report.html">visual_report.html</a>: visual report, charts, sandwich strips, and band/path R2.</li>
   <li><a href="project_about.md">project_about.md</a>: project explanation and Q&A.</li>
   <li><a href="../export_manifest.md">export_manifest.md</a>: file list and data definitions.</li>
 </ul>
@@ -3621,16 +3696,15 @@ def main() -> None:
     raw_rows = read_raw_rows(input_paths)
     feature_rows = build_feature_rows(raw_rows)
     europe_bar_truth_rows = build_europe_bar_truth_rows(feature_rows)
-    simple_beta, simple_pred, _simple_y, _simple_weights = fit_europe_bar_regression(
-        europe_bar_truth_rows,
-        simple_europe_regression_vector,
-    )
+    band_simple_models = fit_band_simple_regressions(europe_bar_truth_rows)
+    simple_pred = band_prediction_list(europe_bar_truth_rows, band_simple_models)
     enhanced_beta, enhanced_pred, _enhanced_y, _enhanced_weights = fit_europe_bar_regression(
         europe_bar_truth_rows,
         enhanced_europe_regression_vector,
     )
     europe_regression_prediction_rows = build_europe_regression_prediction_rows(
         europe_bar_truth_rows,
+        band_simple_models,
         simple_pred,
         enhanced_pred,
     )
@@ -3644,7 +3718,7 @@ def main() -> None:
     )
     write_europe_regression_report(
         europe_bar_truth_rows,
-        simple_beta,
+        band_simple_models,
         simple_pred,
         enhanced_beta,
         enhanced_pred,
@@ -3652,8 +3726,8 @@ def main() -> None:
     )
     write_europe_regression_visual_report_html(
         europe_bar_truth_rows,
-        simple_beta,
-        simple_pred,
+        band_simple_models,
+        europe_regression_prediction_rows,
         args.out_dir / "reviewer_package" / "visual_report.html",
     )
     write_export_manifest(

@@ -72,8 +72,44 @@
     .grid.summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .selected-path-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .endpoint-panel, .path-control-panel {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      background: #fafbfc;
+    }
+    .endpoint-panel h3, .path-control-panel h3 { margin-bottom: 10px; }
+    .endpoint-panel .grid { grid-template-columns: 1fr 1fr; }
+    .path-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .path-summary-item {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      background: white;
+    }
+    .path-summary-item strong { display: block; font-size: 14px; }
+    .path-summary-item span { color: var(--muted); font-size: 11px; }
+    .validation-status {
+      margin-top: 12px;
+      border-left: 4px solid var(--orange);
+      background: #fff7ed;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .validation-status.exact { border-left-color: var(--green); background: #edf7f2; }
     @media (max-width: 900px) {
-      .grid, .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .grid, .grid.two, .grid.three, .selected-path-grid, .path-summary-grid { grid-template-columns: 1fr; }
       .grid.summary-grid { grid-template-columns: 1fr; }
     }
     label {
@@ -127,6 +163,16 @@
       color: #184f37;
       min-height: 42px;
     }
+    .example {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f6f8fa;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      max-width: 980px;
+      overflow-x: auto;
+      line-height: 1.55;
+    }
     .metric {
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -153,6 +199,19 @@
       border-radius: var(--radius);
       padding: 12px;
       background: #fbfcfe;
+    }
+    .path-coeff-block {
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    .path-coeff-block:first-child {
+      border-top: 0;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .path-coeff-block h3 {
+      margin-bottom: 8px;
     }
     .band-workspace {
       border-top: 2px solid #aeb8c8;
@@ -369,6 +428,51 @@
   </header>
 
   <main>
+    <section id="selectedPathPanel">
+      <h2>Selected Path</h2>
+      <p class="note">This shared path selection describes the directional-antenna validation context and will later drive the WSPR Band Activity Report and Daily WSPR Path Matrix. Endpoint radii define WSPR activity areas; they do not alter directional-antenna evidence.</p>
+      <div class="selected-path-grid">
+        <div class="endpoint-panel">
+          <h3>Station Alpha</h3>
+          <label for="pathContA">Continent</label>
+          <select id="pathContA"></select>
+          <label for="pathCityA" style="margin-top:8px;">City</label>
+          <select id="pathCityA"></select>
+          <label for="pathRadiusA" style="margin-top:8px;">Alpha endpoint radius</label>
+          <select id="pathRadiusA"></select>
+          <p class="note mono" id="pathInfoA">Select Station Alpha.</p>
+        </div>
+        <div class="path-control-panel">
+          <h3>Path Settings</h3>
+          <label for="selectedPathDate">Date UTC</label>
+          <input id="selectedPathDate" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" maxlength="10" aria-describedby="selectedPathDateHelp">
+          <p class="note mono" id="selectedPathDateHelp" style="margin:5px 0 0;">Format: YYYY-MM-DD</p>
+          <div class="actions">
+            <button id="applySelectedPath" type="button">Apply Selected Path</button>
+          </div>
+          <p class="note">The selected date and endpoint areas are stored in this browser for later operator panels.</p>
+        </div>
+        <div class="endpoint-panel">
+          <h3>Station Bravo</h3>
+          <label for="pathContB">Continent</label>
+          <select id="pathContB"></select>
+          <label for="pathCityB" style="margin-top:8px;">City</label>
+          <select id="pathCityB"></select>
+          <label for="pathRadiusB" style="margin-top:8px;">Bravo endpoint radius</label>
+          <select id="pathRadiusB"></select>
+          <p class="note mono" id="pathInfoB">Select Station Bravo.</p>
+        </div>
+      </div>
+      <div class="path-summary-grid">
+        <div class="path-summary-item"><strong id="selectedPathLabel">-</strong><span>Selected city path</span></div>
+        <div class="path-summary-item"><strong id="selectedShortDistance">-</strong><span>Short-path distance</span></div>
+        <div class="path-summary-item"><strong id="selectedLongDistance">-</strong><span>Long-path distance</span></div>
+        <div class="path-summary-item"><strong id="selectedShortBearing">-</strong><span>Alpha short-path bearing</span></div>
+        <div class="path-summary-item"><strong id="selectedLongBearing">-</strong><span>Alpha long-path bearing</span></div>
+      </div>
+      <div class="validation-status" id="selectedPathValidation">Select and apply a path.</div>
+    </section>
+
     <section id="inputPanel">
       <h2>Load VK4EMM Antenna Data</h2>
       <div class="grid two">
@@ -412,7 +516,7 @@
         <h2>Band Models And Charts</h2>
         <span class="note" id="visualSubtitle">Load data to build the chart.</span>
       </div>
-      <p class="note">Each band has independent Model and Trial coefficients.<br>On each band, the chart shows observed counts for Loop 3 and Loop 2. The model predictions are shown only for the dominant path. Predictions for both paths are available in "Regression Predictions".</p>
+      <p class="note">Each band and each path have independent Model and Trial coefficients.<br>On each band, the chart shows observed counts for Loop 3 and Loop 2. The model predictions are shown only for the dominant path. Predictions for both paths are available in "Regression Predictions".<br>Calibrated band/path models and applied trial coefficients are saved in this browser for later sessions.</p>
       <div class="grid two" style="margin-bottom:10px;">
         <div>
           <label for="visualDate">Visual date UTC</label>
@@ -457,9 +561,28 @@
     </section>
 
     <section>
+      <h2>Q & A</h2>
+      <h3>Q. How does the model work?</h3>
+      <p><strong>A. Worked example.</strong> This example uses two directional loop antennas on 2026-05-05 at 17:00 UTC on 20m at end-points Brisbane &lt;&gt; Frankfurt.</p>
+      <p>Spot counts from each directional antenna are used to calculate a path dominance score and the observed direction, short-path or long-path. The model then tries to reproduce those antenna observations with an optimum combination of solar variables and coefficient multipliers.</p>
+      <p>The measured spot counts are in the <strong>Europe Bar Truth</strong> tab for 2026-05-05, 17:00 UTC, 20m:</p>
+      <div class="example">
+        Loop2_count = 202<br>
+        Loop3_count = 53<br><br>
+        path_dominance_score = (Loop2_count - Loop3_count) / (Loop2_count + Loop3_count)<br>
+        path_dominance_score = (202 - 53) / (202 + 53)<br>
+        path_dominance_score = 149 / 255<br>
+        path_dominance_score = 0.584
+      </div>
+      <p>Because Loop 2 has the higher spot count, the antenna evidence favours short-path propagation in this 30-minute bin.</p>
+      <p>The model then attempts to reproduce the antenna observations by multiplying calculated solar/path variables by optimised coefficients. This optimisation method is multiple regression. If the model agrees well with the antenna observations, the model may be useful. If it does not agree well, a model calibration process is needed.</p>
+      <p>The long-term aim is for a station without directional antennas to use the nearest validated model as an indication of likely long-path or likely short-path propagation.</p>
+    </section>
+
+    <section>
       <h2>About This Prototype</h2>
       <p>This first JavaScript port is intentionally narrow. It is designed to establish numerical trust against the Python reference before adding broader operator tools.</p>
-      <p>The simple model estimates the observed antenna path dominance score from <span class="mono">constant</span>, <span class="mono">dark_delta</span>, <span class="mono">greyline_delta</span>, and <span class="mono">endpoint_twilight</span>. Coefficients are fitted separately for each band. Weighted R2 uses spot count as the weight. SNR is not used.</p>
+      <p>The simple model estimates path support from <span class="mono">constant</span>, <span class="mono">dark_delta</span>, <span class="mono">greyline_delta</span>, and <span class="mono">endpoint_twilight</span>. Coefficients are fitted separately for each band and each path. Weighted R2 uses spot count as the weight. SNR is not used.</p>
       <p><span class="mono">bearing_difference</span> values are degrees between a fixed antenna bearing and a calculated path bearing. Values can be high because an antenna may be pointing away from that path; 0 degrees is aligned, 90 degrees is broadside, and 180 degrees is opposite.</p>
     </section>
   </main>
@@ -473,6 +596,1869 @@
     const EARTH_RADIUS_KM = 6371.0088;
     const BANDS = [40, 30, 20];
     const COEFFICIENTS = ["constant", "dark_delta", "greyline_delta", "endpoint_twilight"];
+    const COEFFICIENT_STORAGE_KEY = "longPathBandPathCoefficientState.v2";
+    const SELECTED_PATH_STORAGE_KEY = "longPathSelectedPath.v1";
+    const ENDPOINT_RADII_KM = [1800, 1200, 900, 600, 300, 200, 100, 50];
+    const VALIDATED_PATHS = [{
+      id: "brisbane_frankfurt_vk4emm",
+      cities: ["Brisbane, Australia", "Frankfurt, Germany"],
+      label: "Brisbane <> Frankfurt",
+      source: "VK4EMM QG62LR directional Loop 2 / Loop 3 evidence"
+    }];
+const CITIES = {
+  "Africa": [
+    {
+      "name": "Cairo, Egypt",
+      "city": "Cairo",
+      "country": "Egypt",
+      "lat": 30.05,
+      "lon": 31.25,
+      "population": 11893000,
+      "capital": true
+    },
+    {
+      "name": "Lagos, Nigeria",
+      "city": "Lagos",
+      "country": "Nigeria",
+      "lat": 6.4433,
+      "lon": 3.3915,
+      "population": 9466000,
+      "capital": false
+    },
+    {
+      "name": "Kinshasa, Congo (Kinshasa)",
+      "city": "Kinshasa",
+      "country": "Congo (Kinshasa)",
+      "lat": -4.3297,
+      "lon": 15.315,
+      "population": 7843000,
+      "capital": false
+    },
+    {
+      "name": "Luanda, Angola",
+      "city": "Luanda",
+      "country": "Angola",
+      "lat": -8.8383,
+      "lon": 13.2344,
+      "population": 5172900,
+      "capital": true
+    },
+    {
+      "name": "Khartoum, Sudan",
+      "city": "Khartoum",
+      "country": "Sudan",
+      "lat": 15.5881,
+      "lon": 32.5342,
+      "population": 4754000,
+      "capital": true
+    },
+    {
+      "name": "Alexandria, Egypt",
+      "city": "Alexandria",
+      "country": "Egypt",
+      "lat": 31.2,
+      "lon": 29.95,
+      "population": 4165000,
+      "capital": false
+    },
+    {
+      "name": "Abidjan, Côte D’Ivoire",
+      "city": "Abidjan",
+      "country": "Côte D’Ivoire",
+      "lat": 5.32,
+      "lon": -4.04,
+      "population": 3802000,
+      "capital": false
+    },
+    {
+      "name": "Johannesburg, South Africa",
+      "city": "Johannesburg",
+      "country": "South Africa",
+      "lat": -26.17,
+      "lon": 28.03,
+      "population": 3435000,
+      "capital": false
+    },
+    {
+      "name": "Algiers, Algeria",
+      "city": "Algiers",
+      "country": "Algeria",
+      "lat": 36.7631,
+      "lon": 3.0506,
+      "population": 3354000,
+      "capital": true
+    },
+    {
+      "name": "Cape Town, South Africa",
+      "city": "Cape Town",
+      "country": "South Africa",
+      "lat": -33.92,
+      "lon": 18.435,
+      "population": 3215000,
+      "capital": false
+    },
+    {
+      "name": "Casablanca, Morocco",
+      "city": "Casablanca",
+      "country": "Morocco",
+      "lat": 33.6,
+      "lon": -7.6164,
+      "population": 3181000,
+      "capital": false
+    },
+    {
+      "name": "Kano, Nigeria",
+      "city": "Kano",
+      "country": "Nigeria",
+      "lat": 12.0,
+      "lon": 8.52,
+      "population": 3140000,
+      "capital": false
+    },
+    {
+      "name": "Addis Ababa, Ethiopia",
+      "city": "Addis Ababa",
+      "country": "Ethiopia",
+      "lat": 9.0333,
+      "lon": 38.7,
+      "population": 3100000,
+      "capital": true
+    },
+    {
+      "name": "Nairobi, Kenya",
+      "city": "Nairobi",
+      "country": "Kenya",
+      "lat": -1.2833,
+      "lon": 36.8167,
+      "population": 3010000,
+      "capital": true
+    },
+    {
+      "name": "Benoni, South Africa",
+      "city": "Benoni",
+      "country": "South Africa",
+      "lat": -26.1496,
+      "lon": 28.3299,
+      "population": 2986000,
+      "capital": false
+    },
+    {
+      "name": "Dar es Salaam, Tanzania",
+      "city": "Dar es Salaam",
+      "country": "Tanzania",
+      "lat": -6.8,
+      "lon": 39.2683,
+      "population": 2930000,
+      "capital": false
+    },
+    {
+      "name": "Durban, South Africa",
+      "city": "Durban",
+      "country": "South Africa",
+      "lat": -29.865,
+      "lon": 30.98,
+      "population": 2729000,
+      "capital": false
+    },
+    {
+      "name": "El Giza, Egypt",
+      "city": "El Giza",
+      "country": "Egypt",
+      "lat": 30.01,
+      "lon": 31.19,
+      "population": 2681863,
+      "capital": false
+    },
+    {
+      "name": "Ibadan, Nigeria",
+      "city": "Ibadan",
+      "country": "Nigeria",
+      "lat": 7.38,
+      "lon": 3.93,
+      "population": 2628000,
+      "capital": false
+    },
+    {
+      "name": "Dakar, Senegal",
+      "city": "Dakar",
+      "country": "Senegal",
+      "lat": 14.7158,
+      "lon": -17.4731,
+      "population": 2604000,
+      "capital": true
+    },
+    {
+      "name": "Tunis, Tunisia",
+      "city": "Tunis",
+      "country": "Tunisia",
+      "lat": 36.8028,
+      "lon": 10.1797,
+      "population": 2412500,
+      "capital": true
+    },
+    {
+      "name": "Omdurman, Sudan",
+      "city": "Omdurman",
+      "country": "Sudan",
+      "lat": 15.6167,
+      "lon": 32.48,
+      "population": 2395159,
+      "capital": false
+    },
+    {
+      "name": "Tripoli, Libya",
+      "city": "Tripoli",
+      "country": "Libya",
+      "lat": 32.8925,
+      "lon": 13.18,
+      "population": 2189000,
+      "capital": true
+    },
+    {
+      "name": "Accra, Ghana",
+      "city": "Accra",
+      "country": "Ghana",
+      "lat": 5.55,
+      "lon": -0.2167,
+      "population": 2121000,
+      "capital": true
+    },
+    {
+      "name": "Douala, Cameroon",
+      "city": "Douala",
+      "country": "Cameroon",
+      "lat": 4.0604,
+      "lon": 9.71,
+      "population": 1906000,
+      "capital": false
+    },
+    {
+      "name": "Rabat, Morocco",
+      "city": "Rabat",
+      "country": "Morocco",
+      "lat": 34.0253,
+      "lon": -6.8361,
+      "population": 1705000,
+      "capital": true
+    },
+    {
+      "name": "Antananarivo, Madagascar",
+      "city": "Antananarivo",
+      "country": "Madagascar",
+      "lat": -18.9166,
+      "lon": 47.5166,
+      "population": 1697000,
+      "capital": true
+    },
+    {
+      "name": "Kumasi, Ghana",
+      "city": "Kumasi",
+      "country": "Ghana",
+      "lat": 6.69,
+      "lon": -1.63,
+      "population": 1646000,
+      "capital": false
+    },
+    {
+      "name": "Yaounde, Cameroon",
+      "city": "Yaounde",
+      "country": "Cameroon",
+      "lat": 3.8667,
+      "lon": 11.5167,
+      "population": 1611000,
+      "capital": true
+    },
+    {
+      "name": "Abuja, Nigeria",
+      "city": "Abuja",
+      "country": "Nigeria",
+      "lat": 9.0833,
+      "lon": 7.5333,
+      "population": 1576000,
+      "capital": true
+    },
+    {
+      "name": "Windhoek, Namibia",
+      "city": "Windhoek",
+      "country": "Namibia",
+      "lat": -22.5609,
+      "lon": 17.0658,
+      "population": 431000,
+      "capital": true
+    },
+    {
+      "name": "Gaborone, Botswana",
+      "city": "Gaborone",
+      "country": "Botswana",
+      "lat": -24.6282,
+      "lon": 25.9231,
+      "population": 246000,
+      "capital": true
+    }
+  ],
+  "Asia": [
+    {
+      "name": "Tokyo, Japan",
+      "city": "Tokyo",
+      "country": "Japan",
+      "lat": 35.685,
+      "lon": 139.7514,
+      "population": 35676000,
+      "capital": true
+    },
+    {
+      "name": "Mumbai, India",
+      "city": "Mumbai",
+      "country": "India",
+      "lat": 19.017,
+      "lon": 72.857,
+      "population": 18978000,
+      "capital": false
+    },
+    {
+      "name": "Delhi, India",
+      "city": "Delhi",
+      "country": "India",
+      "lat": 28.67,
+      "lon": 77.23,
+      "population": 15926000,
+      "capital": true
+    },
+    {
+      "name": "Shanghai, China",
+      "city": "Shanghai",
+      "country": "China",
+      "lat": 31.2165,
+      "lon": 121.4365,
+      "population": 14987000,
+      "capital": false
+    },
+    {
+      "name": "Kolkata, India",
+      "city": "Kolkata",
+      "country": "India",
+      "lat": 22.495,
+      "lon": 88.3247,
+      "population": 14787000,
+      "capital": false
+    },
+    {
+      "name": "Dhaka, Bangladesh",
+      "city": "Dhaka",
+      "country": "Bangladesh",
+      "lat": 23.7231,
+      "lon": 90.4086,
+      "population": 12797394,
+      "capital": true
+    },
+    {
+      "name": "Karachi, Pakistan",
+      "city": "Karachi",
+      "country": "Pakistan",
+      "lat": 24.87,
+      "lon": 66.99,
+      "population": 12130000,
+      "capital": false
+    },
+    {
+      "name": "Ōsaka, Japan",
+      "city": "Ōsaka",
+      "country": "Japan",
+      "lat": 34.75,
+      "lon": 135.4601,
+      "population": 11294000,
+      "capital": false
+    },
+    {
+      "name": "Beijing, China",
+      "city": "Beijing",
+      "country": "China",
+      "lat": 39.9289,
+      "lon": 116.3883,
+      "population": 11106000,
+      "capital": true
+    },
+    {
+      "name": "Manila, Philippines",
+      "city": "Manila",
+      "country": "Philippines",
+      "lat": 14.6042,
+      "lon": 120.9822,
+      "population": 11100000,
+      "capital": true
+    },
+    {
+      "name": "Istanbul, Turkey",
+      "city": "Istanbul",
+      "country": "Turkey",
+      "lat": 41.105,
+      "lon": 29.01,
+      "population": 10061000,
+      "capital": false
+    },
+    {
+      "name": "Seoul, Korea, South",
+      "city": "Seoul",
+      "country": "Korea, South",
+      "lat": 37.5663,
+      "lon": 126.9997,
+      "population": 9796000,
+      "capital": false
+    },
+    {
+      "name": "Jakarta, Indonesia",
+      "city": "Jakarta",
+      "country": "Indonesia",
+      "lat": -6.1744,
+      "lon": 106.8294,
+      "population": 9125000,
+      "capital": true
+    },
+    {
+      "name": "Guangzhou, China",
+      "city": "Guangzhou",
+      "country": "China",
+      "lat": 23.145,
+      "lon": 113.325,
+      "population": 8829000,
+      "capital": false
+    },
+    {
+      "name": "Tehran, Iran",
+      "city": "Tehran",
+      "country": "Iran",
+      "lat": 35.6719,
+      "lon": 51.4243,
+      "population": 7873000,
+      "capital": true
+    },
+    {
+      "name": "Shenzhen, China",
+      "city": "Shenzhen",
+      "country": "China",
+      "lat": 22.5524,
+      "lon": 114.1221,
+      "population": 7581000,
+      "capital": false
+    },
+    {
+      "name": "Wuhan, China",
+      "city": "Wuhan",
+      "country": "China",
+      "lat": 30.58,
+      "lon": 114.27,
+      "population": 7243000,
+      "capital": false
+    },
+    {
+      "name": "Hong Kong, Hong Kong",
+      "city": "Hong Kong",
+      "country": "Hong Kong",
+      "lat": 22.305,
+      "lon": 114.185,
+      "population": 7206000,
+      "capital": false
+    },
+    {
+      "name": "Tianjin, China",
+      "city": "Tianjin",
+      "country": "China",
+      "lat": 39.13,
+      "lon": 117.2,
+      "population": 7180000,
+      "capital": false
+    },
+    {
+      "name": "Chennai, India",
+      "city": "Chennai",
+      "country": "India",
+      "lat": 13.09,
+      "lon": 80.28,
+      "population": 7163000,
+      "capital": false
+    },
+    {
+      "name": "Taipei, Taiwan",
+      "city": "Taipei",
+      "country": "Taiwan",
+      "lat": 25.0358,
+      "lon": 121.5683,
+      "population": 6900273,
+      "capital": false
+    },
+    {
+      "name": "Bangalore, India",
+      "city": "Bangalore",
+      "country": "India",
+      "lat": 12.97,
+      "lon": 77.56,
+      "population": 6787000,
+      "capital": false
+    },
+    {
+      "name": "Bangkok, Thailand",
+      "city": "Bangkok",
+      "country": "Thailand",
+      "lat": 13.75,
+      "lon": 100.5166,
+      "population": 6704000,
+      "capital": true
+    },
+    {
+      "name": "Lahore, Pakistan",
+      "city": "Lahore",
+      "country": "Pakistan",
+      "lat": 31.56,
+      "lon": 74.35,
+      "population": 6577000,
+      "capital": false
+    },
+    {
+      "name": "Chongqing, China",
+      "city": "Chongqing",
+      "country": "China",
+      "lat": 29.565,
+      "lon": 106.595,
+      "population": 6461000,
+      "capital": false
+    },
+    {
+      "name": "Hyderabad, India",
+      "city": "Hyderabad",
+      "country": "India",
+      "lat": 17.4,
+      "lon": 78.48,
+      "population": 6376000,
+      "capital": false
+    },
+    {
+      "name": "Harbin, China",
+      "city": "Harbin",
+      "country": "China",
+      "lat": 45.8038,
+      "lon": 126.5349,
+      "population": 5879000,
+      "capital": false
+    },
+    {
+      "name": "Ahmedabad, India",
+      "city": "Ahmedabad",
+      "country": "India",
+      "lat": 23.0301,
+      "lon": 72.58,
+      "population": 5375000,
+      "capital": false
+    },
+    {
+      "name": "Ho Chi Minh City, Vietnam",
+      "city": "Ho Chi Minh City",
+      "country": "Vietnam",
+      "lat": 10.78,
+      "lon": 106.695,
+      "population": 5314000,
+      "capital": false
+    },
+    {
+      "name": "Singapore, Singapore",
+      "city": "Singapore",
+      "country": "Singapore",
+      "lat": 1.293,
+      "lon": 103.8558,
+      "population": 5183700,
+      "capital": true
+    },
+    {
+      "name": "Baghdad, Iraq",
+      "city": "Baghdad",
+      "country": "Iraq",
+      "lat": 33.3386,
+      "lon": 44.3939,
+      "population": 5054000,
+      "capital": true
+    },
+    {
+      "name": "Sapporo, Japan",
+      "city": "Sapporo",
+      "country": "Japan",
+      "lat": 43.0618,
+      "lon": 141.3545,
+      "population": 1952000,
+      "capital": false
+    },
+    {
+      "name": "Ulaanbaatar, Mongolia",
+      "city": "Ulaanbaatar",
+      "country": "Mongolia",
+      "lat": 47.8864,
+      "lon": 106.9057,
+      "population": 1586000,
+      "capital": true
+    },
+    {
+      "name": "Vladivostok, Russia",
+      "city": "Vladivostok",
+      "country": "Russia",
+      "lat": 43.1155,
+      "lon": 131.8855,
+      "population": 606000,
+      "capital": false
+    },
+    {
+      "name": "Yakutsk, Russia",
+      "city": "Yakutsk",
+      "country": "Russia",
+      "lat": 62.0355,
+      "lon": 129.6755,
+      "population": 355000,
+      "capital": false
+    }
+  ],
+  "Europe": [
+    {
+      "name": "Moscow, Russia",
+      "city": "Moscow",
+      "country": "Russia",
+      "lat": 55.7522,
+      "lon": 37.6155,
+      "population": 10452000,
+      "capital": true
+    },
+    {
+      "name": "Paris, France",
+      "city": "Paris",
+      "country": "France",
+      "lat": 48.8667,
+      "lon": 2.3333,
+      "population": 9904000,
+      "capital": true
+    },
+    {
+      "name": "London, United Kingdom",
+      "city": "London",
+      "country": "United Kingdom",
+      "lat": 51.5,
+      "lon": -0.1167,
+      "population": 8567000,
+      "capital": false
+    },
+    {
+      "name": "Madrid, Spain",
+      "city": "Madrid",
+      "country": "Spain",
+      "lat": 40.4,
+      "lon": -3.6834,
+      "population": 5567000,
+      "capital": true
+    },
+    {
+      "name": "Barcelona, Spain",
+      "city": "Barcelona",
+      "country": "Spain",
+      "lat": 41.3833,
+      "lon": 2.1834,
+      "population": 4920000,
+      "capital": false
+    },
+    {
+      "name": "St. Petersburg, Russia",
+      "city": "St. Petersburg",
+      "country": "Russia",
+      "lat": 59.939,
+      "lon": 30.316,
+      "population": 4553000,
+      "capital": false
+    },
+    {
+      "name": "Berlin, Germany",
+      "city": "Berlin",
+      "country": "Germany",
+      "lat": 52.5218,
+      "lon": 13.4015,
+      "population": 3406000,
+      "capital": true
+    },
+    {
+      "name": "Rome, Italy",
+      "city": "Rome",
+      "country": "Italy",
+      "lat": 41.896,
+      "lon": 12.4833,
+      "population": 3339000,
+      "capital": true
+    },
+    {
+      "name": "Athens, Greece",
+      "city": "Athens",
+      "country": "Greece",
+      "lat": 37.9833,
+      "lon": 23.7333,
+      "population": 3242000,
+      "capital": true
+    },
+    {
+      "name": "Milan, Italy",
+      "city": "Milan",
+      "country": "Italy",
+      "lat": 45.47,
+      "lon": 9.205,
+      "population": 2945000,
+      "capital": false
+    },
+    {
+      "name": "Stuttgart, Germany",
+      "city": "Stuttgart",
+      "country": "Germany",
+      "lat": 48.78,
+      "lon": 9.2,
+      "population": 2944700,
+      "capital": false
+    },
+    {
+      "name": "Frankfurt, Germany",
+      "city": "Frankfurt",
+      "country": "Germany",
+      "lat": 50.1,
+      "lon": 8.675,
+      "population": 2895000,
+      "capital": false
+    },
+    {
+      "name": "Lisbon, Portugal",
+      "city": "Lisbon",
+      "country": "Portugal",
+      "lat": 38.7227,
+      "lon": -9.1449,
+      "population": 2812000,
+      "capital": true
+    },
+    {
+      "name": "Katowice, Poland",
+      "city": "Katowice",
+      "country": "Poland",
+      "lat": 50.2604,
+      "lon": 19.02,
+      "population": 2746000,
+      "capital": false
+    },
+    {
+      "name": "Kiev, Ukraine",
+      "city": "Kiev",
+      "country": "Ukraine",
+      "lat": 50.4334,
+      "lon": 30.5166,
+      "population": 2709000,
+      "capital": false
+    },
+    {
+      "name": "Vienna, Austria",
+      "city": "Vienna",
+      "country": "Austria",
+      "lat": 48.2,
+      "lon": 16.3666,
+      "population": 2400000,
+      "capital": true
+    },
+    {
+      "name": "Mannheim, Germany",
+      "city": "Mannheim",
+      "country": "Germany",
+      "lat": 49.5004,
+      "lon": 8.47,
+      "population": 2362000,
+      "capital": false
+    },
+    {
+      "name": "Birmingham, United Kingdom",
+      "city": "Birmingham",
+      "country": "United Kingdom",
+      "lat": 52.475,
+      "lon": -1.92,
+      "population": 2285000,
+      "capital": false
+    },
+    {
+      "name": "Naples, Italy",
+      "city": "Naples",
+      "country": "Italy",
+      "lat": 40.84,
+      "lon": 14.245,
+      "population": 2250000,
+      "capital": false
+    },
+    {
+      "name": "Manchester, United Kingdom",
+      "city": "Manchester",
+      "country": "United Kingdom",
+      "lat": 53.5004,
+      "lon": -2.248,
+      "population": 2230000,
+      "capital": false
+    },
+    {
+      "name": "Bucharest, Romania",
+      "city": "Bucharest",
+      "country": "Romania",
+      "lat": 44.4334,
+      "lon": 26.0999,
+      "population": 1942000,
+      "capital": true
+    },
+    {
+      "name": "Minsk, Belarus",
+      "city": "Minsk",
+      "country": "Belarus",
+      "lat": 53.9,
+      "lon": 27.5666,
+      "population": 1805000,
+      "capital": true
+    },
+    {
+      "name": "Hamburg, Germany",
+      "city": "Hamburg",
+      "country": "Germany",
+      "lat": 53.55,
+      "lon": 10.0,
+      "population": 1757000,
+      "capital": false
+    },
+    {
+      "name": "Brussels, Belgium",
+      "city": "Brussels",
+      "country": "Belgium",
+      "lat": 50.8333,
+      "lon": 4.3333,
+      "population": 1743000,
+      "capital": true
+    },
+    {
+      "name": "Essen, Germany",
+      "city": "Essen",
+      "country": "Germany",
+      "lat": 51.45,
+      "lon": 7.0166,
+      "population": 1742135,
+      "capital": false
+    },
+    {
+      "name": "Warsaw, Poland",
+      "city": "Warsaw",
+      "country": "Poland",
+      "lat": 52.25,
+      "lon": 21.0,
+      "population": 1707000,
+      "capital": true
+    },
+    {
+      "name": "Budapest, Hungary",
+      "city": "Budapest",
+      "country": "Hungary",
+      "lat": 47.5,
+      "lon": 19.0833,
+      "population": 1679000,
+      "capital": true
+    },
+    {
+      "name": "Stockholm, Sweden",
+      "city": "Stockholm",
+      "country": "Sweden",
+      "lat": 59.3293,
+      "lon": 18.0686,
+      "population": 1625000,
+      "capital": true
+    },
+    {
+      "name": "Leeds, United Kingdom",
+      "city": "Leeds",
+      "country": "United Kingdom",
+      "lat": 53.83,
+      "lon": -1.58,
+      "population": 1529000,
+      "capital": false
+    },
+    {
+      "name": "Copenhagen, Denmark",
+      "city": "Copenhagen",
+      "country": "Denmark",
+      "lat": 55.6761,
+      "lon": 12.5683,
+      "population": 1340000,
+      "capital": true
+    },
+    {
+      "name": "Helsinki, Finland",
+      "city": "Helsinki",
+      "country": "Finland",
+      "lat": 60.1699,
+      "lon": 24.9384,
+      "population": 1330000,
+      "capital": true
+    },
+    {
+      "name": "Oslo, Norway",
+      "city": "Oslo",
+      "country": "Norway",
+      "lat": 59.9139,
+      "lon": 10.7522,
+      "population": 1086000,
+      "capital": true
+    },
+    {
+      "name": "Tallinn, Estonia",
+      "city": "Tallinn",
+      "country": "Estonia",
+      "lat": 59.437,
+      "lon": 24.7536,
+      "population": 450000,
+      "capital": true
+    },
+    {
+      "name": "Reykjavik, Iceland",
+      "city": "Reykjavik",
+      "country": "Iceland",
+      "lat": 64.1466,
+      "lon": -21.9426,
+      "population": 140000,
+      "capital": true
+    },
+    {
+      "name": "Tromsø, Norway",
+      "city": "Tromsø",
+      "country": "Norway",
+      "lat": 69.6492,
+      "lon": 18.9553,
+      "population": 77000,
+      "capital": false
+    }
+  ],
+  "North America": [
+    {
+      "name": "New York, United States",
+      "city": "New York",
+      "country": "United States",
+      "lat": 40.6943,
+      "lon": -73.9249,
+      "population": 19354922,
+      "capital": false
+    },
+    {
+      "name": "Mexico City, Mexico",
+      "city": "Mexico City",
+      "country": "Mexico",
+      "lat": 19.4424,
+      "lon": -99.131,
+      "population": 19028000,
+      "capital": true
+    },
+    {
+      "name": "Los Angeles, United States",
+      "city": "Los Angeles",
+      "country": "United States",
+      "lat": 34.1139,
+      "lon": -118.4068,
+      "population": 12815475,
+      "capital": false
+    },
+    {
+      "name": "Chicago, United States",
+      "city": "Chicago",
+      "country": "United States",
+      "lat": 41.8373,
+      "lon": -87.6861,
+      "population": 8675982,
+      "capital": false
+    },
+    {
+      "name": "Miami, United States",
+      "city": "Miami",
+      "country": "United States",
+      "lat": 25.784,
+      "lon": -80.2102,
+      "population": 6381966,
+      "capital": false
+    },
+    {
+      "name": "Dallas, United States",
+      "city": "Dallas",
+      "country": "United States",
+      "lat": 32.7937,
+      "lon": -96.7662,
+      "population": 5733259,
+      "capital": false
+    },
+    {
+      "name": "Philadelphia, United States",
+      "city": "Philadelphia",
+      "country": "United States",
+      "lat": 40.0076,
+      "lon": -75.134,
+      "population": 5637884,
+      "capital": false
+    },
+    {
+      "name": "Houston, United States",
+      "city": "Houston",
+      "country": "United States",
+      "lat": 29.7868,
+      "lon": -95.3905,
+      "population": 5446468,
+      "capital": false
+    },
+    {
+      "name": "Washington, United States",
+      "city": "Washington",
+      "country": "United States",
+      "lat": 38.9047,
+      "lon": -77.0163,
+      "population": 5289420,
+      "capital": true
+    },
+    {
+      "name": "Atlanta, United States",
+      "city": "Atlanta",
+      "country": "United States",
+      "lat": 33.7626,
+      "lon": -84.4228,
+      "population": 5228750,
+      "capital": false
+    },
+    {
+      "name": "Toronto, Canada",
+      "city": "Toronto",
+      "country": "Canada",
+      "lat": 43.7,
+      "lon": -79.42,
+      "population": 5213000,
+      "capital": false
+    },
+    {
+      "name": "Boston, United States",
+      "city": "Boston",
+      "country": "United States",
+      "lat": 42.3188,
+      "lon": -71.0846,
+      "population": 4637537,
+      "capital": false
+    },
+    {
+      "name": "Guadalajara, Mexico",
+      "city": "Guadalajara",
+      "country": "Mexico",
+      "lat": 20.67,
+      "lon": -103.33,
+      "population": 4198000,
+      "capital": false
+    },
+    {
+      "name": "Phoenix, United States",
+      "city": "Phoenix",
+      "country": "United States",
+      "lat": 33.5722,
+      "lon": -112.0891,
+      "population": 4081849,
+      "capital": false
+    },
+    {
+      "name": "Monterrey, Mexico",
+      "city": "Monterrey",
+      "country": "Mexico",
+      "lat": 25.67,
+      "lon": -100.33,
+      "population": 3712000,
+      "capital": false
+    },
+    {
+      "name": "Montréal, Canada",
+      "city": "Montréal",
+      "country": "Canada",
+      "lat": 45.5,
+      "lon": -73.5833,
+      "population": 3678000,
+      "capital": false
+    },
+    {
+      "name": "Seattle, United States",
+      "city": "Seattle",
+      "country": "United States",
+      "lat": 47.6211,
+      "lon": -122.3244,
+      "population": 3643765,
+      "capital": false
+    },
+    {
+      "name": "San Francisco, United States",
+      "city": "San Francisco",
+      "country": "United States",
+      "lat": 37.7562,
+      "lon": -122.443,
+      "population": 3603761,
+      "capital": false
+    },
+    {
+      "name": "Detroit, United States",
+      "city": "Detroit",
+      "country": "United States",
+      "lat": 42.3834,
+      "lon": -83.1024,
+      "population": 3522206,
+      "capital": false
+    },
+    {
+      "name": "San Diego, United States",
+      "city": "San Diego",
+      "country": "United States",
+      "lat": 32.8312,
+      "lon": -117.1226,
+      "population": 3210314,
+      "capital": false
+    },
+    {
+      "name": "Minneapolis, United States",
+      "city": "Minneapolis",
+      "country": "United States",
+      "lat": 44.9635,
+      "lon": -93.2678,
+      "population": 2926757,
+      "capital": false
+    },
+    {
+      "name": "Tampa, United States",
+      "city": "Tampa",
+      "country": "United States",
+      "lat": 27.9937,
+      "lon": -82.4454,
+      "population": 2804240,
+      "capital": false
+    },
+    {
+      "name": "Denver, United States",
+      "city": "Denver",
+      "country": "United States",
+      "lat": 39.7621,
+      "lon": -104.8759,
+      "population": 2787266,
+      "capital": false
+    },
+    {
+      "name": "Vancouver, Canada",
+      "city": "Vancouver",
+      "country": "Canada",
+      "lat": 49.2734,
+      "lon": -123.1216,
+      "population": 2313328,
+      "capital": false
+    },
+    {
+      "name": "Puebla, Mexico",
+      "city": "Puebla",
+      "country": "Mexico",
+      "lat": 19.05,
+      "lon": -98.2,
+      "population": 2195000,
+      "capital": false
+    },
+    {
+      "name": "Havana, Cuba",
+      "city": "Havana",
+      "country": "Cuba",
+      "lat": 23.132,
+      "lon": -82.3642,
+      "population": 2174000,
+      "capital": true
+    },
+    {
+      "name": "Baltimore, United States",
+      "city": "Baltimore",
+      "country": "United States",
+      "lat": 39.3051,
+      "lon": -76.6144,
+      "population": 2170504,
+      "capital": false
+    },
+    {
+      "name": "Santo Domingo, Dominican Republic",
+      "city": "Santo Domingo",
+      "country": "Dominican Republic",
+      "lat": 18.4701,
+      "lon": -69.9001,
+      "population": 2154000,
+      "capital": true
+    },
+    {
+      "name": "San Juan, Puerto Rico",
+      "city": "San Juan",
+      "country": "Puerto Rico",
+      "lat": 18.4655,
+      "lon": -66.1057,
+      "population": 342000,
+      "capital": true
+    },
+    {
+      "name": "Anchorage, United States",
+      "city": "Anchorage",
+      "country": "United States",
+      "lat": 61.2181,
+      "lon": -149.9003,
+      "population": 291000,
+      "capital": false
+    },
+    {
+      "name": "Fairbanks, United States",
+      "city": "Fairbanks",
+      "country": "United States",
+      "lat": 64.8378,
+      "lon": -147.7164,
+      "population": 32000,
+      "capital": false
+    },
+    {
+      "name": "Whitehorse, Canada",
+      "city": "Whitehorse",
+      "country": "Canada",
+      "lat": 60.7212,
+      "lon": -135.0568,
+      "population": 28000,
+      "capital": true
+    },
+    {
+      "name": "Yellowknife, Canada",
+      "city": "Yellowknife",
+      "country": "Canada",
+      "lat": 62.454,
+      "lon": -114.3718,
+      "population": 20000,
+      "capital": true
+    },
+    {
+      "name": "Nuuk, Greenland",
+      "city": "Nuuk",
+      "country": "Greenland",
+      "lat": 64.1835,
+      "lon": -51.7216,
+      "population": 19000,
+      "capital": true
+    },
+    {
+      "name": "Iqaluit, Canada",
+      "city": "Iqaluit",
+      "country": "Canada",
+      "lat": 63.7467,
+      "lon": -68.5167,
+      "population": 7700,
+      "capital": true
+    }
+  ],
+  "Oceania": [
+    {
+      "name": "Sydney, Australia",
+      "city": "Sydney",
+      "country": "Australia",
+      "lat": -33.92,
+      "lon": 151.1852,
+      "population": 4630000,
+      "capital": false
+    },
+    {
+      "name": "Melbourne, Australia",
+      "city": "Melbourne",
+      "country": "Australia",
+      "lat": -37.82,
+      "lon": 144.975,
+      "population": 4170000,
+      "capital": false
+    },
+    {
+      "name": "Brisbane, Australia",
+      "city": "Brisbane",
+      "country": "Australia",
+      "lat": -27.455,
+      "lon": 153.0351,
+      "population": 1860000,
+      "capital": false
+    },
+    {
+      "name": "Ocean View, Australia",
+      "city": "Ocean View",
+      "country": "Australia",
+      "lat": -27.122,
+      "lon": 152.8175,
+      "population": 5000,
+      "capital": false
+    },
+    {
+      "name": "Perth, Australia",
+      "city": "Perth",
+      "country": "Australia",
+      "lat": -31.955,
+      "lon": 115.84,
+      "population": 1532000,
+      "capital": false
+    },
+    {
+      "name": "Auckland, New Zealand",
+      "city": "Auckland",
+      "country": "New Zealand",
+      "lat": -36.8481,
+      "lon": 174.763,
+      "population": 1377200,
+      "capital": false
+    },
+    {
+      "name": "Adelaide, Australia",
+      "city": "Adelaide",
+      "country": "Australia",
+      "lat": -34.935,
+      "lon": 138.6,
+      "population": 1145000,
+      "capital": false
+    },
+    {
+      "name": "Newcastle, Australia",
+      "city": "Newcastle",
+      "country": "Australia",
+      "lat": -32.8453,
+      "lon": 151.815,
+      "population": 1134616,
+      "capital": false
+    },
+    {
+      "name": "Gold Coast, Australia",
+      "city": "Gold Coast",
+      "country": "Australia",
+      "lat": -28.0815,
+      "lon": 153.4482,
+      "population": 527660,
+      "capital": false
+    },
+    {
+      "name": "Wellington, New Zealand",
+      "city": "Wellington",
+      "country": "New Zealand",
+      "lat": -41.3,
+      "lon": 174.7833,
+      "population": 393400,
+      "capital": true
+    },
+    {
+      "name": "Manukau, New Zealand",
+      "city": "Manukau",
+      "country": "New Zealand",
+      "lat": -37.0,
+      "lon": 174.885,
+      "population": 375600,
+      "capital": false
+    },
+    {
+      "name": "Christchurch, New Zealand",
+      "city": "Christchurch",
+      "country": "New Zealand",
+      "lat": -43.535,
+      "lon": 172.63,
+      "population": 363200,
+      "capital": false
+    },
+    {
+      "name": "Canberra, Australia",
+      "city": "Canberra",
+      "country": "Australia",
+      "lat": -35.283,
+      "lon": 149.129,
+      "population": 327700,
+      "capital": true
+    },
+    {
+      "name": "Port Moresby, Papua New Guinea",
+      "city": "Port Moresby",
+      "country": "Papua New Guinea",
+      "lat": -9.4647,
+      "lon": 147.1925,
+      "population": 283733,
+      "capital": true
+    },
+    {
+      "name": "Wollongong, Australia",
+      "city": "Wollongong",
+      "country": "Australia",
+      "lat": -34.4154,
+      "lon": 150.89,
+      "population": 260914,
+      "capital": false
+    },
+    {
+      "name": "Hobart, Australia",
+      "city": "Hobart",
+      "country": "Australia",
+      "lat": -42.8821,
+      "lon": 147.3272,
+      "population": 240000,
+      "capital": true
+    },
+    {
+      "name": "Geelong, Australia",
+      "city": "Geelong",
+      "country": "Australia",
+      "lat": -38.1675,
+      "lon": 144.3956,
+      "population": 160991,
+      "capital": false
+    },
+    {
+      "name": "Cairns, Australia",
+      "city": "Cairns",
+      "country": "Australia",
+      "lat": -16.8878,
+      "lon": 145.7633,
+      "population": 154225,
+      "capital": false
+    },
+    {
+      "name": "Hamilton, New Zealand",
+      "city": "Hamilton",
+      "country": "New Zealand",
+      "lat": -37.7783,
+      "lon": 175.2896,
+      "population": 148200,
+      "capital": false
+    },
+    {
+      "name": "Darwin, Australia",
+      "city": "Darwin",
+      "country": "Australia",
+      "lat": -12.4634,
+      "lon": 130.8456,
+      "population": 147000,
+      "capital": true
+    },
+    {
+      "name": "Townsville, Australia",
+      "city": "Townsville",
+      "country": "Australia",
+      "lat": -19.25,
+      "lon": 146.77,
+      "population": 138954,
+      "capital": false
+    },
+    {
+      "name": "Papeete, French Polynesia",
+      "city": "Papeete",
+      "country": "French Polynesia",
+      "lat": -17.5334,
+      "lon": -149.5667,
+      "population": 131695,
+      "capital": true
+    },
+    {
+      "name": "Lae, Papua New Guinea",
+      "city": "Lae",
+      "country": "Papua New Guinea",
+      "lat": -6.733,
+      "lon": 146.99,
+      "population": 131052,
+      "capital": false
+    },
+    {
+      "name": "Maina, Guam",
+      "city": "Maina",
+      "country": "Guam",
+      "lat": 13.4692,
+      "lon": 144.7332,
+      "population": 122411,
+      "capital": false
+    },
+    {
+      "name": "Tauranga, New Zealand",
+      "city": "Tauranga",
+      "country": "New Zealand",
+      "lat": -37.6964,
+      "lon": 176.1536,
+      "population": 121500,
+      "capital": false
+    },
+    {
+      "name": "Dunedin, New Zealand",
+      "city": "Dunedin",
+      "country": "New Zealand",
+      "lat": -45.8854,
+      "lon": 170.491,
+      "population": 117700,
+      "capital": false
+    },
+    {
+      "name": "Lower Hutt, New Zealand",
+      "city": "Lower Hutt",
+      "country": "New Zealand",
+      "lat": -41.2037,
+      "lon": 174.9123,
+      "population": 102400,
+      "capital": false
+    },
+    {
+      "name": "Nouméa, New Caledonia",
+      "city": "Nouméa",
+      "country": "New Caledonia",
+      "lat": -22.2758,
+      "lon": 166.458,
+      "population": 100000,
+      "capital": true
+    },
+    {
+      "name": "Suva, Fiji",
+      "city": "Suva",
+      "country": "Fiji",
+      "lat": -18.1416,
+      "lon": 178.4419,
+      "population": 94000,
+      "capital": true
+    },
+    {
+      "name": "Honiara, Solomon Islands",
+      "city": "Honiara",
+      "country": "Solomon Islands",
+      "lat": -9.4333,
+      "lon": 159.95,
+      "population": 92000,
+      "capital": true
+    },
+    {
+      "name": "Invercargill, New Zealand",
+      "city": "Invercargill",
+      "country": "New Zealand",
+      "lat": -46.4132,
+      "lon": 168.3538,
+      "population": 52000,
+      "capital": false
+    },
+    {
+      "name": "Port Vila, Vanuatu",
+      "city": "Port Vila",
+      "country": "Vanuatu",
+      "lat": -17.7333,
+      "lon": 168.3167,
+      "population": 51000,
+      "capital": true
+    },
+    {
+      "name": "Apia, Samoa",
+      "city": "Apia",
+      "country": "Samoa",
+      "lat": -13.85,
+      "lon": -171.75,
+      "population": 37000,
+      "capital": true
+    },
+    {
+      "name": "Nukuʻalofa, Tonga",
+      "city": "Nukuʻalofa",
+      "country": "Tonga",
+      "lat": -21.1394,
+      "lon": -175.2048,
+      "population": 24000,
+      "capital": true
+    }
+  ],
+  "South America": [
+    {
+      "name": "São Paulo, Brazil",
+      "city": "São Paulo",
+      "country": "Brazil",
+      "lat": -23.5587,
+      "lon": -46.625,
+      "population": 18845000,
+      "capital": false
+    },
+    {
+      "name": "Buenos Aires, Argentina",
+      "city": "Buenos Aires",
+      "country": "Argentina",
+      "lat": -34.6025,
+      "lon": -58.3975,
+      "population": 12795000,
+      "capital": true
+    },
+    {
+      "name": "Rio de Janeiro, Brazil",
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "lat": -22.925,
+      "lon": -43.225,
+      "population": 11748000,
+      "capital": false
+    },
+    {
+      "name": "Lima, Peru",
+      "city": "Lima",
+      "country": "Peru",
+      "lat": -12.048,
+      "lon": -77.0501,
+      "population": 8012000,
+      "capital": true
+    },
+    {
+      "name": "Bogota, Colombia",
+      "city": "Bogota",
+      "country": "Colombia",
+      "lat": 4.5964,
+      "lon": -74.0833,
+      "population": 7772000,
+      "capital": true
+    },
+    {
+      "name": "Santiago, Chile",
+      "city": "Santiago",
+      "country": "Chile",
+      "lat": -33.45,
+      "lon": -70.667,
+      "population": 5720000,
+      "capital": true
+    },
+    {
+      "name": "Belo Horizonte, Brazil",
+      "city": "Belo Horizonte",
+      "country": "Brazil",
+      "lat": -19.915,
+      "lon": -43.915,
+      "population": 5575000,
+      "capital": false
+    },
+    {
+      "name": "Porto Alegre, Brazil",
+      "city": "Porto Alegre",
+      "country": "Brazil",
+      "lat": -30.05,
+      "lon": -51.2,
+      "population": 3917000,
+      "capital": false
+    },
+    {
+      "name": "Brasília, Brazil",
+      "city": "Brasília",
+      "country": "Brazil",
+      "lat": -15.7833,
+      "lon": -47.9161,
+      "population": 3716996,
+      "capital": true
+    },
+    {
+      "name": "Recife, Brazil",
+      "city": "Recife",
+      "country": "Brazil",
+      "lat": -8.0756,
+      "lon": -34.9156,
+      "population": 3651000,
+      "capital": false
+    },
+    {
+      "name": "Fortaleza, Brazil",
+      "city": "Fortaleza",
+      "country": "Brazil",
+      "lat": -3.75,
+      "lon": -38.58,
+      "population": 3602319,
+      "capital": false
+    },
+    {
+      "name": "Salvador, Brazil",
+      "city": "Salvador",
+      "country": "Brazil",
+      "lat": -12.97,
+      "lon": -38.48,
+      "population": 3484000,
+      "capital": false
+    },
+    {
+      "name": "Medellín, Colombia",
+      "city": "Medellín",
+      "country": "Colombia",
+      "lat": 6.275,
+      "lon": -75.575,
+      "population": 3297000,
+      "capital": false
+    },
+    {
+      "name": "Curitiba, Brazil",
+      "city": "Curitiba",
+      "country": "Brazil",
+      "lat": -25.42,
+      "lon": -49.32,
+      "population": 3084000,
+      "capital": false
+    },
+    {
+      "name": "Caracas, Venezuela",
+      "city": "Caracas",
+      "country": "Venezuela",
+      "lat": 10.501,
+      "lon": -66.917,
+      "population": 2985000,
+      "capital": true
+    },
+    {
+      "name": "Campinas, Brazil",
+      "city": "Campinas",
+      "country": "Brazil",
+      "lat": -22.9,
+      "lon": -47.1,
+      "population": 2791000,
+      "capital": false
+    },
+    {
+      "name": "Guayaquil, Ecuador",
+      "city": "Guayaquil",
+      "country": "Ecuador",
+      "lat": -2.22,
+      "lon": -79.92,
+      "population": 2514000,
+      "capital": false
+    },
+    {
+      "name": "Cali, Colombia",
+      "city": "Cali",
+      "country": "Colombia",
+      "lat": 3.4,
+      "lon": -76.5,
+      "population": 2254000,
+      "capital": false
+    },
+    {
+      "name": "Belém, Brazil",
+      "city": "Belém",
+      "country": "Brazil",
+      "lat": -1.45,
+      "lon": -48.48,
+      "population": 2167000,
+      "capital": false
+    },
+    {
+      "name": "Santa Cruz, Bolivia",
+      "city": "Santa Cruz",
+      "country": "Bolivia",
+      "lat": -17.7539,
+      "lon": -63.226,
+      "population": 2102998,
+      "capital": false
+    },
+    {
+      "name": "Maracaibo, Venezuela",
+      "city": "Maracaibo",
+      "country": "Venezuela",
+      "lat": 10.73,
+      "lon": -71.66,
+      "population": 2072000,
+      "capital": false
+    },
+    {
+      "name": "Goiânia, Brazil",
+      "city": "Goiânia",
+      "country": "Brazil",
+      "lat": -16.72,
+      "lon": -49.3,
+      "population": 2022000,
+      "capital": false
+    },
+    {
+      "name": "Asunción, Paraguay",
+      "city": "Asunción",
+      "country": "Paraguay",
+      "lat": -25.2964,
+      "lon": -57.6415,
+      "population": 1870000,
+      "capital": true
+    },
+    {
+      "name": "Barranquilla, Colombia",
+      "city": "Barranquilla",
+      "country": "Colombia",
+      "lat": 10.96,
+      "lon": -74.8,
+      "population": 1798000,
+      "capital": false
+    },
+    {
+      "name": "Valencia, Venezuela",
+      "city": "Valencia",
+      "country": "Venezuela",
+      "lat": 10.23,
+      "lon": -67.98,
+      "population": 1770000,
+      "capital": false
+    },
+    {
+      "name": "Manaus, Brazil",
+      "city": "Manaus",
+      "country": "Brazil",
+      "lat": -3.1,
+      "lon": -60.0,
+      "population": 1753000,
+      "capital": false
+    },
+    {
+      "name": "Santos, Brazil",
+      "city": "Santos",
+      "country": "Brazil",
+      "lat": -23.9537,
+      "lon": -46.3329,
+      "population": 1709000,
+      "capital": false
+    },
+    {
+      "name": "Vitória, Brazil",
+      "city": "Vitória",
+      "country": "Brazil",
+      "lat": -20.324,
+      "lon": -40.366,
+      "population": 1704000,
+      "capital": false
+    },
+    {
+      "name": "Quito, Ecuador",
+      "city": "Quito",
+      "country": "Ecuador",
+      "lat": -0.215,
+      "lon": -78.5001,
+      "population": 1701000,
+      "capital": true
+    },
+    {
+      "name": "La Paz, Bolivia",
+      "city": "La Paz",
+      "country": "Bolivia",
+      "lat": -16.498,
+      "lon": -68.15,
+      "population": 1590000,
+      "capital": true
+    },
+    {
+      "name": "Puerto Montt, Chile",
+      "city": "Puerto Montt",
+      "country": "Chile",
+      "lat": -41.4718,
+      "lon": -72.9396,
+      "population": 245000,
+      "capital": false
+    },
+    {
+      "name": "Punta Arenas, Chile",
+      "city": "Punta Arenas",
+      "country": "Chile",
+      "lat": -53.1638,
+      "lon": -70.9171,
+      "population": 125000,
+      "capital": false
+    },
+    {
+      "name": "Ushuaia, Argentina",
+      "city": "Ushuaia",
+      "country": "Argentina",
+      "lat": -54.8019,
+      "lon": -68.303,
+      "population": 82000,
+      "capital": false
+    }
+  ]
+};
+    const PATHS = [
+      {id: "short", label: "Short-path", observedField: "loop2_count", predictedField: "model_predicted_loop2_count"},
+      {id: "long", label: "Long-path", observedField: "loop3_count", predictedField: "model_predicted_loop3_count"}
+    ];
     const FEATURE_FIELDS = [
       "date_utc","utc_slot","slot_index","band_m","continent","country_code","tx_grid",
       "loop2_count","loop3_count","observation_count","loop2_share","path_dominance_score",
@@ -505,6 +2491,7 @@
       truth: [],
       predictions: [],
       bandModels: {},
+      selectedPath: null,
       visualDate: "",
       activeTab: "truth"
     };
@@ -520,6 +2507,157 @@
     function radians(deg) { return deg * Math.PI / 180; }
     function degrees(rad) { return rad * 180 / Math.PI; }
     function clamp(value, low, high) { return Math.min(high, Math.max(low, value)); }
+
+    function maidenheadFromLatLon(lat, lon, precision = 6) {
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      let adjLon = Number(lon) + 180;
+      let adjLat = Number(lat) + 90;
+      const fieldLon = Math.floor(adjLon / 20);
+      const fieldLat = Math.floor(adjLat / 10);
+      let result = letters[fieldLon] + letters[fieldLat];
+      if (precision <= 2) return result;
+      adjLon -= fieldLon * 20;
+      adjLat -= fieldLat * 10;
+      const squareLon = Math.floor(adjLon / 2);
+      const squareLat = Math.floor(adjLat);
+      result += String(squareLon) + String(squareLat);
+      if (precision <= 4) return result;
+      adjLon -= squareLon * 2;
+      adjLat -= squareLat;
+      result += letters[Math.floor(adjLon * 12)].toLowerCase() + letters[Math.floor(adjLat * 24)].toLowerCase();
+      return result;
+    }
+
+    function selectedCity(continent, cityName) {
+      return CITIES[continent]?.find(city => city.name === cityName) || null;
+    }
+
+    function populatePathCities(which, selectedName = "") {
+      const continent = $(`pathCont${which}`).value;
+      const citySelect = $(`pathCity${which}`);
+      citySelect.innerHTML = '<option value="">Select City</option>';
+      (CITIES[continent] || []).slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(city => {
+        const option = document.createElement("option");
+        option.value = city.name;
+        option.textContent = city.name;
+        citySelect.appendChild(option);
+      });
+      if ([...citySelect.options].some(option => option.value === selectedName)) citySelect.value = selectedName;
+      renderSelectedPathPreview();
+    }
+
+    function isValidIsoDate(value) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+      const date = new Date(`${value}T00:00:00Z`);
+      return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    }
+
+    function selectedPathDraft() {
+      const continentA = $("pathContA").value;
+      const continentB = $("pathContB").value;
+      const cityAName = $("pathCityA").value;
+      const cityBName = $("pathCityB").value;
+      const cityA = selectedCity(continentA, cityAName);
+      const cityB = selectedCity(continentB, cityBName);
+      if (!cityA || !cityB) return null;
+      return {
+        continentA, cityAName, cityA, radiusA: Number($("pathRadiusA").value),
+        continentB, cityBName, cityB, radiusB: Number($("pathRadiusB").value),
+        dateUtc: $("selectedPathDate").value
+      };
+    }
+
+    function exactValidatedPath(path) {
+      if (!path) return null;
+      return VALIDATED_PATHS.find(model => model.cities.includes(path.cityAName) && model.cities.includes(path.cityBName)) || null;
+    }
+
+    function renderSelectedPathPreview() {
+      const path = selectedPathDraft();
+      if (!path) {
+        $("pathInfoA").textContent = "Select Station Alpha.";
+        $("pathInfoB").textContent = "Select Station Bravo.";
+        $("selectedPathLabel").textContent = "-";
+        $("selectedShortDistance").textContent = "-";
+        $("selectedLongDistance").textContent = "-";
+        $("selectedShortBearing").textContent = "-";
+        $("selectedLongBearing").textContent = "-";
+        $("selectedPathValidation").className = "validation-status";
+        $("selectedPathValidation").textContent = "Select and apply a path.";
+        return;
+      }
+      const gridA = maidenheadFromLatLon(path.cityA.lat, path.cityA.lon, 6).toUpperCase();
+      const gridB = maidenheadFromLatLon(path.cityB.lat, path.cityB.lon, 6).toUpperCase();
+      const shortKm = haversineKm(path.cityA.lat, path.cityA.lon, path.cityB.lat, path.cityB.lon);
+      const longKm = 2 * Math.PI * EARTH_RADIUS_KM - shortKm;
+      const shortBearing = initialBearingDeg(path.cityA.lat, path.cityA.lon, path.cityB.lat, path.cityB.lon);
+      const longBearing = (shortBearing + 180) % 360;
+      $("pathInfoA").textContent = `${gridA} | ${fmtSig(path.cityA.lat, 5)}, ${fmtSig(path.cityA.lon, 5)} | radius ${path.radiusA.toLocaleString()} km`;
+      $("pathInfoB").textContent = `${gridB} | ${fmtSig(path.cityB.lat, 5)}, ${fmtSig(path.cityB.lon, 5)} | radius ${path.radiusB.toLocaleString()} km`;
+      $("selectedPathLabel").textContent = `${path.cityA.city || path.cityAName.split(",")[0]} <> ${path.cityB.city || path.cityBName.split(",")[0]}`;
+      $("selectedShortDistance").textContent = `${Math.round(shortKm).toLocaleString()} km`;
+      $("selectedLongDistance").textContent = `${Math.round(longKm).toLocaleString()} km`;
+      $("selectedShortBearing").textContent = `${Math.round(shortBearing)} deg`;
+      $("selectedLongBearing").textContent = `${Math.round(longBearing)} deg`;
+      const validated = exactValidatedPath(path);
+      $("selectedPathValidation").className = `validation-status${validated ? " exact" : ""}`;
+      $("selectedPathValidation").textContent = validated
+        ? `Exact directional-antenna validation model available: ${validated.label}. Source: ${validated.source}.`
+        : "No exact directional-antenna validation model is currently available for this selected path. WSPR activity may still be reported later, but it must not be presented as validated short-path or long-path evidence.";
+    }
+
+    function saveSelectedPath() {
+      const path = selectedPathDraft();
+      if (!path) {
+        $("selectedPathValidation").className = "validation-status";
+        $("selectedPathValidation").textContent = "Select both endpoint cities before applying the path.";
+        return;
+      }
+      if (!isValidIsoDate(path.dateUtc)) {
+        $("selectedPathValidation").className = "validation-status";
+        $("selectedPathValidation").textContent = "Enter the UTC date in YYYY-MM-DD format before applying the path.";
+        $("selectedPathDate").focus();
+        return;
+      }
+      const saved = {
+        continentA: path.continentA, cityAName: path.cityAName, radiusA: path.radiusA,
+        continentB: path.continentB, cityBName: path.cityBName, radiusB: path.radiusB,
+        dateUtc: path.dateUtc
+      };
+      localStorage.setItem(SELECTED_PATH_STORAGE_KEY, JSON.stringify(saved));
+      app.selectedPath = path;
+      $("pathName").value = `${path.cityA.city || path.cityAName.split(",")[0]} <> ${path.cityB.city || path.cityBName.split(",")[0]}`;
+      renderSelectedPathPreview();
+    }
+
+    function initSelectedPathPanel() {
+      const continents = Object.keys(CITIES).sort();
+      ["A", "B"].forEach(which => {
+        const select = $(`pathCont${which}`);
+        select.innerHTML = '<option value="">Select Continent</option>';
+        continents.forEach(continent => {
+          const option = document.createElement("option");
+          option.value = continent;
+          option.textContent = continent;
+          select.appendChild(option);
+        });
+        const radius = $(`pathRadius${which}`);
+        radius.innerHTML = ENDPOINT_RADII_KM.map(km => `<option value="${km}">${km.toLocaleString()} km</option>`).join("");
+      });
+      const today = new Date().toISOString().slice(0, 10);
+      let saved = {continentA: "Oceania", cityAName: "Brisbane, Australia", radiusA: 1200, continentB: "Europe", cityBName: "Frankfurt, Germany", radiusB: 1200, dateUtc: today};
+      try { saved = {...saved, ...JSON.parse(localStorage.getItem(SELECTED_PATH_STORAGE_KEY) || "{}")}; } catch {}
+      $("pathContA").value = saved.continentA;
+      $("pathContB").value = saved.continentB;
+      populatePathCities("A", saved.cityAName);
+      populatePathCities("B", saved.cityBName);
+      $("pathRadiusA").value = String(saved.radiusA);
+      $("pathRadiusB").value = String(saved.radiusB);
+      $("selectedPathDate").value = isValidIsoDate(saved.dateUtc) ? saved.dateUtc : today;
+      renderSelectedPathPreview();
+      app.selectedPath = selectedPathDraft();
+      if (app.selectedPath) $("pathName").value = `${app.selectedPath.cityA.city || app.selectedPath.cityAName.split(",")[0]} <> ${app.selectedPath.cityB.city || app.selectedPath.cityBName.split(",")[0]}`;
+    }
 
     function maidenheadToLatLon(grid) {
       const g = String(grid || "").trim().toUpperCase();
@@ -1039,22 +3177,169 @@
       return {beta, pred, weightedR2, unweightedR2, predictions};
     }
 
-    function runBandRegressions(rows) {
-      const bandModels = {};
+    function targetShare(row, pathId) {
+      return pathId === "short"
+        ? row.loop2_count / row.observation_count
+        : row.loop3_count / row.observation_count;
+    }
+
+    function pathTrainingRows(rows, pathId) {
+      return rows.filter(row => Number(row.observation_count) > 0);
+    }
+
+    function fitPathRegression(rows, pathId, betaOverride = null) {
+      const trainingRows = pathTrainingRows(rows, pathId);
+      if (trainingRows.length < COEFFICIENTS.length) return {beta: null, weightedR2: null, unweightedR2: null, trainingRows};
+      const x = trainingRows.map(simpleVector);
+      const y = trainingRows.map(row => targetShare(row, pathId));
+      const weights = trainingRows.map(row => Number(row.observation_count));
+      const beta = betaOverride || fitWls(x, y, weights);
+      const pred = predict(x, beta);
+      return {
+        beta,
+        weightedR2: r2Score(y, pred, weights),
+        unweightedR2: r2Score(y, pred),
+        trainingRows
+      };
+    }
+
+    function predictPathShare(row, beta) {
+      return betaIsValid(beta) ? clamp(simpleVector(row).reduce((sum, value, i) => sum + value * beta[i], 0), 0, 1) : 0;
+    }
+
+    function predictionRowsFromPathModels(rows, bandModels) {
       const predictions = [];
       BANDS.forEach(band => {
         const bandRows = rows.filter(row => Number(row.band_m) === band);
-        if (!bandRows.length) return;
-        const reg = runRegression(bandRows);
-        bandModels[band] = {
-          modelBeta: reg.beta,
-          activeBeta: reg.beta,
-          weightedR2: reg.weightedR2,
-          unweightedR2: reg.unweightedR2
-        };
-        predictions.push(...reg.predictions);
+        const model = bandModels[band];
+        if (!bandRows.length || !model?.paths) return;
+        const shortBeta = model.paths.short?.activeBeta || model.paths.short?.modelBeta;
+        const longBeta = model.paths.long?.activeBeta || model.paths.long?.modelBeta;
+        bandRows.forEach(row => {
+          const predictedLoop2 = row.observation_count * predictPathShare(row, shortBeta);
+          const predictedLoop3 = row.observation_count * predictPathShare(row, longBeta);
+          const simple = row.observation_count ? (predictedLoop2 - predictedLoop3) / row.observation_count : 0;
+          predictions.push({
+            date_utc: row.date_utc,
+            utc_slot: row.utc_slot,
+            slot_index: row.slot_index,
+            band_m: row.band_m,
+            loop2_count: row.loop2_count,
+            loop3_count: row.loop3_count,
+            observation_count: row.observation_count,
+            observed_antenna_path_dominance_score: row.path_dominance_score,
+            simple_model_path_dominance_score: simple,
+            simple_residual: row.path_dominance_score - simple,
+            model_predicted_loop2_count: predictedLoop2,
+            model_predicted_loop3_count: predictedLoop3
+          });
+        });
       });
-      return {bandModels, predictions};
+      return predictions.sort((a, b) =>
+        Number(b.band_m || 0) - Number(a.band_m || 0)
+        || String(a.date_utc || "").localeCompare(String(b.date_utc || ""))
+        || Number(a.slot_index || 0) - Number(b.slot_index || 0)
+      );
+    }
+
+    function runBandRegressions(rows) {
+      const bandModels = {};
+      BANDS.forEach(band => {
+        const bandRows = rows.filter(row => Number(row.band_m) === band);
+        if (!bandRows.length) return;
+        const paths = {};
+        PATHS.forEach(path => {
+          const reg = fitPathRegression(bandRows, path.id);
+          paths[path.id] = {
+            modelBeta: reg.beta,
+            activeBeta: reg.beta,
+            weightedR2: reg.weightedR2,
+            unweightedR2: reg.unweightedR2
+          };
+        });
+        bandModels[band] = {paths};
+      });
+      return applyStoredBandModels(rows, bandModels);
+    }
+
+    function betaIsValid(beta) {
+      return Array.isArray(beta) && beta.length === COEFFICIENTS.length && beta.every(value => Number.isFinite(Number(value)));
+    }
+
+    function cleanBeta(beta) {
+      return beta.map(value => Number(value));
+    }
+
+    function loadStoredCoefficientState() {
+      try {
+        const raw = localStorage.getItem(COEFFICIENT_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {bands: {}};
+      } catch {
+        return {bands: {}};
+      }
+    }
+
+    function saveStoredCoefficientState() {
+      const bands = {};
+      BANDS.forEach(band => {
+        const model = app.bandModels[band];
+        if (!model?.paths) return;
+        bands[band] = {paths: {}};
+        PATHS.forEach(path => {
+          const pathModel = model.paths[path.id];
+          if (!pathModel) return;
+          bands[band].paths[path.id] = {
+            modelBeta: betaIsValid(pathModel.modelBeta) ? cleanBeta(pathModel.modelBeta) : null,
+            activeBeta: betaIsValid(pathModel.activeBeta) ? cleanBeta(pathModel.activeBeta) : null
+          };
+        });
+      });
+      try {
+        localStorage.setItem(COEFFICIENT_STORAGE_KEY, JSON.stringify({savedAt: new Date().toISOString(), bands}));
+      } catch (err) {
+        console.warn("Unable to save coefficient state", err);
+      }
+    }
+
+    function applyStoredBandModels(rows, fittedBandModels) {
+      const stored = loadStoredCoefficientState();
+      const bandModels = {};
+      BANDS.forEach(band => {
+        const fitted = fittedBandModels[band];
+        if (!fitted?.paths) return;
+        bandModels[band] = {paths: {}};
+        PATHS.forEach(path => {
+          const fittedPath = fitted.paths[path.id];
+          if (!fittedPath) return;
+          const saved = stored.bands?.[band]?.paths?.[path.id] || {};
+          const modelBeta = betaIsValid(saved.modelBeta) ? cleanBeta(saved.modelBeta) : fittedPath.modelBeta;
+          const activeBeta = betaIsValid(saved.activeBeta) ? cleanBeta(saved.activeBeta) : modelBeta;
+          bandModels[band].paths[path.id] = {...fittedPath, modelBeta, activeBeta};
+        });
+      });
+      return rebuildPredictionsFromBandModels(rows, bandModels);
+    }
+
+    function rebuildPredictionsFromBandModels(rows, bandModels) {
+      const nextBandModels = {...bandModels};
+      BANDS.forEach(band => {
+        const bandRows = rows.filter(row => Number(row.band_m) === band);
+        const model = nextBandModels[band];
+        if (!bandRows.length || !model?.paths) return;
+        PATHS.forEach(path => {
+          const pathModel = model.paths[path.id];
+          if (!pathModel) return;
+          const beta = betaIsValid(pathModel.activeBeta) ? cleanBeta(pathModel.activeBeta) : cleanBeta(pathModel.modelBeta);
+          const reg = fitPathRegression(bandRows, path.id, beta);
+          model.paths[path.id] = {
+            ...pathModel,
+            activeBeta: beta,
+            weightedR2: reg.weightedR2,
+            unweightedR2: reg.unweightedR2
+          };
+        });
+      });
+      return {bandModels: nextBandModels, predictions: predictionRowsFromPathModels(rows, nextBandModels)};
     }
 
     function replaceBandPredictions(predictions, band, bandPredictions) {
@@ -1082,7 +3367,7 @@
         if (!truth.length) throw new Error("No Europe rows with usable Maidenhead grids found for model calculation.");
         const reg = runBandRegressions(truth);
         const dates = [...new Set(observedBars.map(r => r.date_utc))].sort();
-        app = {rawRows, features, observedBars, truth, ...reg, visualDate: dates[0] || "", activeTab: app.activeTab || "truth"};
+        app = {rawRows, features, observedBars, truth, ...reg, selectedPath: app.selectedPath, visualDate: dates[0] || "", activeTab: app.activeTab || "truth"};
         renderAll();
         $("status").textContent = `Loaded ${rawRows.length.toLocaleString()} raw rows from ${($("csvFiles").files || []).length} file(s).`;
       } catch (err) {
@@ -1091,39 +3376,92 @@
       }
     }
 
-    function applyTrial(band) {
-      const beta = COEFFICIENTS.map(name => Number($(`trial_${band}_${name}`).value));
-      if (beta.some(v => !Number.isFinite(v))) {
-        $("status").textContent = `${band}m trial coefficients must all be valid numbers.`;
+    function calibrateModel(band, pathId) {
+      const bandRows = app.truth.filter(row => Number(row.band_m) === Number(band));
+      const path = PATHS.find(item => item.id === pathId);
+      const trainingRows = pathTrainingRows(bandRows, pathId);
+      if (trainingRows.length < COEFFICIENTS.length) {
+        $("status").textContent = `${band}m ${path.label} needs more path rows before calibration can be fitted.`;
         return;
       }
-      const bandRows = app.truth.filter(row => Number(row.band_m) === Number(band));
-      const reg = runRegression(bandRows, beta);
+      let reg;
+      try {
+        reg = fitPathRegression(bandRows, pathId);
+      } catch (err) {
+        console.error(err);
+        $("status").textContent = `${band}m ${path.label} calibration failed: ${err.message || err}`;
+        return;
+      }
+      const bandModel = app.bandModels[band] || {paths: {}};
       app = {
         ...app,
         bandModels: {
           ...app.bandModels,
           [band]: {
-            ...(app.bandModels[band] || {}),
-            activeBeta: beta,
-            weightedR2: reg.weightedR2,
-            unweightedR2: reg.unweightedR2
+            ...bandModel,
+            paths: {
+              ...(bandModel.paths || {}),
+              [pathId]: {
+                ...(bandModel.paths?.[pathId] || {}),
+                modelBeta: reg.beta,
+                activeBeta: betaIsValid(bandModel.paths?.[pathId]?.activeBeta) ? cleanBeta(bandModel.paths[pathId].activeBeta) : reg.beta,
+                modelWeightedR2: reg.weightedR2,
+                modelUnweightedR2: reg.unweightedR2
+              }
+            }
           }
-        },
-        predictions: replaceBandPredictions(app.predictions, band, reg.predictions)
+        }
       };
+      const rebuilt = rebuildPredictionsFromBandModels(app.truth, app.bandModels);
+      app = {...app, ...rebuilt};
+      saveStoredCoefficientState();
       renderAll(false);
-      $("status").textContent = `${band}m trial coefficients applied to that band chart and prediction table.`;
+      $("status").textContent = `${band}m ${path.label} Model coefficients calibrated and saved. Existing Trial coefficients were preserved.`;
     }
 
-    function copyModelToTrial(band) {
-      const model = app.bandModels[band] || {};
+    function applyTrial(band, pathId) {
+      const path = PATHS.find(item => item.id === pathId);
+      const beta = COEFFICIENTS.map(name => Number($(`trial_${band}_${pathId}_${name}`).value));
+      if (beta.some(v => !Number.isFinite(v))) {
+        $("status").textContent = `${band}m ${path.label} trial coefficients must all be valid numbers.`;
+        return;
+      }
+      const bandRows = app.truth.filter(row => Number(row.band_m) === Number(band));
+      const reg = fitPathRegression(bandRows, pathId, beta);
+      const bandModel = app.bandModels[band] || {paths: {}};
+      app = {
+        ...app,
+        bandModels: {
+          ...app.bandModels,
+          [band]: {
+            ...bandModel,
+            paths: {
+              ...(bandModel.paths || {}),
+              [pathId]: {
+                ...(bandModel.paths?.[pathId] || {}),
+                activeBeta: beta,
+                weightedR2: reg.weightedR2,
+                unweightedR2: reg.unweightedR2
+              }
+            }
+          }
+        }
+      };
+      const rebuilt = rebuildPredictionsFromBandModels(app.truth, app.bandModels);
+      app = {...app, ...rebuilt};
+      saveStoredCoefficientState();
+      renderAll(false);
+      $("status").textContent = `${band}m ${path.label} trial coefficients applied, saved in this browser, and written to the prediction table.`;
+    }
+
+    function copyModelToTrial(band, pathId) {
+      const model = app.bandModels[band]?.paths?.[pathId] || {};
       const beta = model.modelBeta || model.activeBeta;
       if (!beta) return;
       COEFFICIENTS.forEach((name, i) => {
-        $(`trial_${band}_${name}`).value = fmtSig(beta[i], 3);
+        $(`trial_${band}_${pathId}_${name}`).value = fmtSig(beta[i], 3);
       });
-      updateTrialSteps(band);
+      updateTrialSteps(band, pathId);
     }
 
     function normalizeTrialInput(input) {
@@ -1143,11 +3481,11 @@
       input.step = Number.isFinite(value) ? trialStepFor(value) : "0.01";
     }
 
-    function updateTrialSteps(band = null) {
-      const inputs = band
-        ? COEFFICIENTS.map(name => $(`trial_${band}_${name}`))
+    function updateTrialSteps(band = null, pathId = null) {
+      const inputs = band && pathId
+        ? COEFFICIENTS.map(name => $(`trial_${band}_${pathId}_${name}`))
         : Array.from(document.querySelectorAll("[data-trial-coeff]"));
-      inputs.forEach(input => updateTrialStep(input));
+      inputs.filter(Boolean).forEach(input => updateTrialStep(input));
     }
 
     function renderAll(copyTrial = true) {
@@ -1177,11 +3515,7 @@
     }
 
     function diagnosticR2(rows, predByKey, pathKind = "all") {
-      const selected = rows.filter(row => {
-        if (pathKind === "short") return row.loop2_count > row.loop3_count;
-        if (pathKind === "long") return row.loop3_count > row.loop2_count;
-        return true;
-      });
+      const selected = rows.filter(row => Number(row.observation_count) > 0);
       const y = [];
       const pred = [];
       const weights = [];
@@ -1202,7 +3536,7 @@
       });
       return {
         bins: y.length,
-        spots: selected.reduce((sum, row) => sum + row.observation_count, 0),
+        spots: selected.reduce((sum, row) => sum + (pathKind === "short" ? row.loop2_count : pathKind === "long" ? row.loop3_count : row.observation_count), 0),
         r2: y.length >= 2 ? r2Score(y, pred, weights) : null
       };
     }
@@ -1220,17 +3554,18 @@
         if (!bandRows.length) return;
         const short = diagnosticR2(bandRows, predByKey, "short");
         const long = diagnosticR2(bandRows, predByKey, "long");
-        const beta = app.bandModels[band]?.modelBeta || null;
-        rows.push({band, path: "short-path evidence", ...short, beta});
-        rows.push({band, path: "long-path evidence", ...long, beta: null});
+        const shortBeta = app.bandModels[band]?.paths?.short?.modelBeta || null;
+        const longBeta = app.bandModels[band]?.paths?.long?.modelBeta || null;
+        rows.push({band, path: "short-path evidence", ...short, beta: shortBeta});
+        rows.push({band, path: "long-path evidence", ...long, beta: longBeta});
       });
       host.innerHTML = `
         <table>
           <thead>
             <tr>
               <th>Band</th><th>Evidence<br>set</th><th>Bins</th><th>Spots</th><th>Weighted<br>R2</th>
-              <th>Band-only<br>constant</th><th>Band-only<br>dark<br>coefficient</th>
-              <th>Band-only<br>grey-line<br>coefficient</th><th>Band-only<br>twilight<br>coefficient</th>
+              <th>Path<br>constant</th><th>Path<br>dark<br>coefficient</th>
+              <th>Path<br>grey-line<br>coefficient</th><th>Path<br>twilight<br>coefficient</th>
             </tr>
           </thead>
           <tbody>
@@ -1272,28 +3607,36 @@
       }
       host.innerHTML = availableBands.map(band => {
         const model = app.bandModels[band];
-        const modelBeta = model.modelBeta || [];
-        const activeBeta = model.activeBeta || modelBeta;
         return `
           <div class="band-workspace">
             <div class="coeff-panel" data-band-panel="${band}">
-              <h3>${band}m Coefficients</h3>
-              <div class="coeff-grid">
-                <div></div>
-                <div class="coeff-head">Model</div>
-                <div class="coeff-head">Trial</div>
-                ${COEFFICIENTS.map((name, i) => `
-                  <div class="coeff-row">
-                    <label>${esc(coefficientLabel(name))}</label>
-                    <input id="model_${band}_${name}" value="${esc(fmtSig(modelBeta[i], 3))}" readonly>
-                    <input id="trial_${band}_${name}" type="number" value="${esc(fmtSig(activeBeta[i], 3))}" data-trial-coeff data-band="${band}">
+              ${PATHS.map(path => {
+                const pathModel = model.paths?.[path.id] || {};
+                const modelBeta = pathModel.modelBeta || [];
+                const activeBeta = pathModel.activeBeta || modelBeta;
+                return `
+                  <div class="path-coeff-block">
+                    <h3>${band}m ${path.label} Coefficients</h3>
+                    <div class="coeff-grid">
+                    <div></div>
+                    <div class="coeff-head">Model</div>
+                    <div class="coeff-head">Trial</div>
+                    ${COEFFICIENTS.map((name, i) => `
+                      <div class="coeff-row">
+                        <label>${esc(coefficientLabel(name))}</label>
+                        <input id="model_${band}_${path.id}_${name}" value="${esc(fmtSig(modelBeta[i], 3))}" readonly>
+                        <input id="trial_${band}_${path.id}_${name}" type="number" value="${esc(fmtSig(activeBeta[i], 3))}" data-trial-coeff data-band="${band}" data-path="${path.id}">
+                      </div>
+                    `).join("")}
                   </div>
-                `).join("")}
-              </div>
-              <div class="actions">
-                <button class="secondary coeff-copy" type="button" data-band="${band}">Copy ${band}m Model To Trial</button>
-                <button class="secondary coeff-apply" type="button" data-band="${band}">Apply ${band}m Trial</button>
-              </div>
+                    <div class="actions">
+                      <button class="secondary coeff-calibrate" type="button" data-band="${band}" data-path="${path.id}">Calibrate ${band}m ${path.label} Model</button>
+                      <button class="secondary coeff-copy" type="button" data-band="${band}" data-path="${path.id}">Copy ${band}m ${path.label} Model To Trial</button>
+                      <button class="secondary coeff-apply" type="button" data-band="${band}" data-path="${path.id}">Apply ${band}m ${path.label} Trial</button>
+                    </div>
+                  </div>
+                `;
+              }).join("")}
             </div>
             <div class="band-chart-host" id="chart_${band}"></div>
           </div>
@@ -1754,7 +4097,7 @@
   </section>
   <section>
     <h2>Band Analysis Summary</h2>
-    <p>Each band and each path are checked independently. A blended R2 made by merging both paths is not used.</p>
+    <p>Each band and each path are checked independently. Separate coefficient sets are used for short-path and long-path. A blended R2 made by merging both paths is not used.</p>
     ${$("bandAnalysis").innerHTML}
   </section>
   <section>
@@ -1788,6 +4131,7 @@
         "## Notes",
         "",
         "- Short-path and long-path evidence are reviewed separately.",
+        "- Separate coefficient sets are used for short-path and long-path.",
         "- A blended R2 made by merging both paths is not used.",
         "- `enhanced_model_path_dominance_score` is a diagnostic model using additional terms; it is not the primary simple model explanation."
       ].join("\\n");
@@ -1799,6 +4143,12 @@
       $("selectedFileList").textContent = files.length ? files.map(f => f.name).join(", ") : "No files selected.";
     }
 
+    $("pathContA").addEventListener("change", () => populatePathCities("A"));
+    $("pathContB").addEventListener("change", () => populatePathCities("B"));
+    ["pathCityA", "pathCityB", "pathRadiusA", "pathRadiusB", "selectedPathDate"].forEach(id => $(id).addEventListener("change", renderSelectedPathPreview));
+    $("applySelectedPath").addEventListener("click", saveSelectedPath);
+    initSelectedPathPanel();
+
     $("btnBuild").addEventListener("click", buildFromFiles);
     $("btnSample").addEventListener("click", buildFromFiles);
     $("csvFiles").addEventListener("change", updateSelectedFileList);
@@ -1806,8 +4156,10 @@
       const button = event.target.closest("button[data-band]");
       if (!button) return;
       const band = Number(button.dataset.band);
-      if (button.classList.contains("coeff-copy")) copyModelToTrial(band);
-      if (button.classList.contains("coeff-apply")) applyTrial(band);
+      const pathId = button.dataset.path;
+      if (button.classList.contains("coeff-calibrate")) calibrateModel(band, pathId);
+      if (button.classList.contains("coeff-copy")) copyModelToTrial(band, pathId);
+      if (button.classList.contains("coeff-apply")) applyTrial(band, pathId);
     });
     $("coefficientHost").addEventListener("input", event => {
       if (event.target.matches("[data-trial-coeff]")) updateTrialStep(event.target);
