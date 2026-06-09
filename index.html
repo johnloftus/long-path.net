@@ -3376,7 +3376,23 @@ const CITIES = {
       }
     }
 
+    function readVisibleTrialDraft(band, pathId) {
+      const values = COEFFICIENTS.map(name => $(`trial_${band}_${pathId}_${name}`)?.value?.trim() ?? "");
+      if (values.some(value => value === "" || !Number.isFinite(Number(value)))) return null;
+      return values;
+    }
+
+    function restoreVisibleTrialDraft(band, pathId, values) {
+      if (!Array.isArray(values) || values.length !== COEFFICIENTS.length) return;
+      COEFFICIENTS.forEach((name, index) => {
+        const input = $(`trial_${band}_${pathId}_${name}`);
+        if (input) input.value = values[index];
+      });
+      updateTrialSteps(band, pathId);
+    }
+
     function calibrateModel(band, pathId) {
+      const visibleTrialDraft = readVisibleTrialDraft(band, pathId);
       const bandRows = app.truth.filter(row => Number(row.band_m) === Number(band));
       const path = PATHS.find(item => item.id === pathId);
       const trainingRows = pathTrainingRows(bandRows, pathId);
@@ -3416,7 +3432,8 @@ const CITIES = {
       app = {...app, ...rebuilt};
       saveStoredCoefficientState();
       renderAll(false);
-      $("status").textContent = `${band}m ${path.label} Model coefficients calibrated and saved. Existing Trial coefficients were preserved.`;
+      restoreVisibleTrialDraft(band, pathId, visibleTrialDraft);
+      $("status").textContent = `${band}m ${path.label} Model coefficients calibrated and saved. Existing and un-applied Trial values were preserved.`;
     }
 
     function applyTrial(band, pathId) {
