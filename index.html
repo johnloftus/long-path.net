@@ -108,6 +108,63 @@
       font-size: 13px;
     }
     .validation-status.exact { border-left-color: var(--green); background: #edf7f2; }
+    .wspr-activity-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .wspr-activity-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .wspr-activity-band {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      min-height: 104px;
+      background: #fafbfc;
+    }
+    .wspr-activity-band.open {
+      border-color: #8bcbae;
+      background: #edf7f2;
+    }
+    .wspr-activity-band strong { color: var(--green); }
+    .wspr-activity-band-name { font-weight: 700; margin-bottom: 5px; }
+    .wspr-activity-band-state { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .wspr-activity-status { margin-top: 12px; padding: 10px 12px; background: #f6f8fa; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+    .wspr-activity-disclaimer { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .daily-matrix-controls { display: grid; grid-template-columns: 180px 180px minmax(280px, 1fr); gap: 10px; align-items: end; margin-top: 12px; }
+    .daily-matrix-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .daily-matrix-status { margin-top: 12px; padding: 10px 12px; background: #f6f8fa; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+    .daily-matrix-wrap { overflow-x: auto; overflow-y: visible; max-height: none; margin-top: 12px; border: 1px solid var(--line); border-radius: 6px; }
+    .daily-matrix-table { width: 720px; min-width: 720px; max-width: 720px; table-layout: fixed; font-size: 11px; }
+    .daily-matrix-table th, .daily-matrix-table td { text-align: center; padding: 3px 2px; border-right: 1px solid var(--line); }
+    .daily-matrix-table th:first-child, .daily-matrix-table td:first-child { width: 48px; }
+    .daily-global-table { width: 428px; min-width: 428px; max-width: 428px; }
+    .daily-global-table th:first-child, .daily-global-table td:first-child { width: 92px; white-space: nowrap; }
+    .daily-matrix-subhead { margin: 16px 0 6px; }
+    .daily-path-scope { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 400; }
+    .daily-matrix-table .path1-head { background: #fff1e7; color: var(--orange); }
+    .daily-matrix-table .path2-head { background: #eaf2fb; color: var(--blue); }
+    .daily-matrix-table .slot-cell { position: sticky; left: 0; background: white; font-weight: 700; z-index: 1; }
+    .daily-matrix-table tbody tr:nth-child(even) td { background-color: #f3f5f7; }
+    .daily-matrix-table td.has-spots { color: white; font-weight: 700; }
+    .daily-model-marker { display: block; margin-top: 2px; font-size: 8px; line-height: 1; color: #fff; }
+    .daily-model-marker.lp { color: #ffe082; }
+    .daily-model-marker.sp { color: #d8f3dc; }
+    .daily-path-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .daily-path-selector { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+    .daily-path-selector.path1 { border-color: #e2a674; background: #fff8f2; }
+    .daily-path-selector.path2 { border-color: #91b7dc; background: #f3f8fd; }
+    .daily-path-selector h3 { margin-top: 0; }
+    .daily-path-selector-grid { display: grid; grid-template-columns: 1fr 1fr 130px; gap: 8px; }
+    .daily-matrix-note { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    .daily-global-scope { margin-top: 6px; color: var(--muted); font-size: 11px; }
+    @media (max-width: 900px) { .daily-matrix-controls, .daily-path-selectors, .daily-path-selector-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) {
       .grid, .grid.two, .grid.three, .selected-path-grid, .path-summary-grid { grid-template-columns: 1fr; }
       .grid.summary-grid { grid-template-columns: 1fr; }
@@ -246,6 +303,18 @@
       font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
+    }
+    .coeff-r2-label {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .coeff-r2-value {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+      padding: 7px 9px;
+      font-weight: 700;
     }
     .coeff-row {
       display: contents;
@@ -414,6 +483,10 @@
       main { width: 100%; margin: 0; }
       section { border: 0; page-break-inside: avoid; }
       body { background: white; }
+      body.daily-matrix-print section { display: none !important; }
+      body.daily-matrix-print #dailyMatrixPanel { display: block !important; }
+      body.daily-matrix-print #dailyMatrixPanel button, body.daily-matrix-print #dailyMatrixPanel .daily-matrix-controls, body.daily-matrix-print #dailyMatrixPanel .daily-matrix-toolbar { display: none !important; }
+      body.daily-matrix-print .daily-matrix-wrap { max-height: none; overflow: visible; border: 0; }
       .bar, .strip-cell, .swatch {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -430,7 +503,7 @@
   <main>
     <section id="selectedPathPanel">
       <h2>Selected Path</h2>
-      <p class="note">This shared path selection describes the directional-antenna validation context and will later drive the WSPR Band Activity Report and Daily WSPR Path Matrix. Endpoint radii define WSPR activity areas; they do not alter directional-antenna evidence.</p>
+      <p class="note">This shared path selection describes the directional-antenna validation context. Endpoint radii are retained for later path-area research; they do not alter directional-antenna evidence or the Daily WSPR Path Matrix.</p>
       <div class="selected-path-grid">
         <div class="endpoint-panel">
           <h3>Station Alpha</h3>
@@ -471,6 +544,62 @@
         <div class="path-summary-item"><strong id="selectedLongBearing">-</strong><span>Alpha long-path bearing</span></div>
       </div>
       <div class="validation-status" id="selectedPathValidation">Select and apply a path.</div>
+    </section>
+
+    <section id="wsprActivityPanel" class="hidden" aria-hidden="true">
+      <div class="wspr-activity-head">
+        <div>
+          <h2>WSPR Band Activity Report - Selected Path</h2>
+          <p class="note" id="wsprActivityMeta">Apply a selected path, then refresh to check recent observed WSPR activity.</p>
+        </div>
+        <button id="refreshWsprActivity" class="secondary" type="button">Refresh WSPR Activity</button>
+      </div>
+      <div class="wspr-activity-status" id="wsprActivityStatus">Waiting for an applied selected path.</div>
+      <div class="wspr-activity-grid" id="wsprActivityGrid"></div>
+      <div class="wspr-activity-disclaimer">Source: wsprnet.org spot reports via wspr.live. This report uses live current UTC and reports observed low-power WSPR activity between the selected endpoint areas in either transmitter/receiver direction. It does not determine whether activity used short-path or long-path, and it is not a forecast or contact guarantee. SNR is not used.</div>
+    </section>
+
+    <section id="dailyMatrixPanel">
+      <h2>Daily WSPR Path Matrix - Single Reporter</h2>
+      <p class="note">Import one or more WSPRnet Spot Database results files, then compare observed activity from one reporter to two independently selected destination areas. The reporter callsign is read from the imported files. Exact duplicate rows are removed automatically.</p>
+      <div class="daily-matrix-controls">
+        <div><label for="dailyReporter">Reporter callsign from file</label><input id="dailyReporter" type="text" placeholder="Select WSPRnet file" autocomplete="off" readonly></div>
+        <div><label for="dailyMatrixDate">Date UTC</label><input id="dailyMatrixDate" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" maxlength="10"></div>
+        <div><label for="dailyWsprnetFile">Saved WSPRnet results files</label><input id="dailyWsprnetFile" type="file" accept=".json,.csv,.html,.htm,application/json,text/csv,text/html" multiple></div>
+      </div>
+      <div class="daily-path-selectors">
+        <div class="daily-path-selector path1">
+          <h3>Path 1 Destination</h3>
+          <div class="daily-path-selector-grid">
+            <div><label for="dailyCont1">Continent</label><select id="dailyCont1"></select></div>
+            <div><label for="dailyCity1">City</label><select id="dailyCity1"></select></div>
+            <div><label for="dailyRadius1">Radius</label><select id="dailyRadius1"></select></div>
+          </div>
+        </div>
+        <div class="daily-path-selector path2">
+          <h3>Path 2 Destination</h3>
+          <div class="daily-path-selector-grid">
+            <div><label for="dailyCont2">Continent</label><select id="dailyCont2"></select></div>
+            <div><label for="dailyCity2">City</label><select id="dailyCity2"></select></div>
+            <div><label for="dailyRadius2">Radius</label><select id="dailyRadius2"></select></div>
+          </div>
+        </div>
+      </div>
+      <div class="daily-matrix-toolbar">
+        <button id="openWsprnetQuery" class="secondary" type="button">Open WSPRnet Query</button>
+        <button id="buildDailyMatrix" type="button">Build Two-Path Matrix</button>
+        <button id="dailyCountModeToggle" class="secondary daily-count-mode-toggle" type="button" aria-pressed="false">Counting: Raw Spots</button>
+        <button id="exportDailyMatrixCsv" class="secondary" type="button">Export CSV</button>
+        <button id="printDailyMatrix" class="secondary" type="button">Print / PDF</button>
+      </div>
+      <div class="daily-matrix-status" id="dailyMatrixStatus">At WSPRnet, set Reporter to the required callsign, select the time period and result count, update the query, then save the results page or CSV and import it here.</div>
+      <div class="daily-matrix-wrap" id="dailyMatrixWrap"></div>
+      <h3 class="daily-matrix-subhead">All Destinations Reporter Activity</h3>
+      <div class="daily-matrix-note">This separate matrix shows activity heard by the reporter from all beacon locations in the imported files. It is not filtered by either selected destination area.</div>
+      <div class="daily-global-scope" id="dailyGlobalScope"></div>
+      <div class="daily-matrix-toolbar"><button id="dailyGlobalCountModeToggle" class="secondary daily-count-mode-toggle" type="button" aria-pressed="false">Counting: Raw Spots</button></div>
+      <div class="daily-matrix-wrap" id="dailyGlobalMatrixWrap"></div>
+      <div class="daily-matrix-note">At WSPRnet, leave <strong>Unique unchecked</strong>. <strong>Raw Spots</strong> counts every imported report row. <strong>Unique Beacons Per Bin</strong> counts each beacon callsign once within each 30-minute, band, and destination cell. <strong>Cumulative Unique Beacons</strong> counts each beacon callsign once across the UTC day and shows the running total by time bin. Exact duplicate imported rows are removed in all modes to prevent overlapping downloaded files from double-counting the same report. Destination filtering uses each beacon Grid and the selected city radius. Observed counts do not determine short-path or long-path propagation. An SP or LP marker is shown only when an exact validated model, same-date directional evidence, and conservative band/path validation thresholds are available. SNR is not used.</div>
     </section>
 
     <section id="inputPanel">
@@ -516,7 +645,7 @@
         <h2>Band Models And Charts</h2>
         <span class="note" id="visualSubtitle">Load data to build the chart.</span>
       </div>
-      <p class="note">Each band and each path have independent Model and Trial coefficients.<br>On each band, the chart shows observed counts for Loop 3 and Loop 2. The model predictions are shown only for the dominant path. Predictions for both paths are available in "Regression Predictions".<br>Calibrated band/path models and applied trial coefficients are saved in this browser for later sessions.</p>
+      <p class="note">Each band and each path have independent Model and Trial coefficients.<br>On each band, the chart shows observed counts for Loop 3 and Loop 2. In each time slot, the model bar shows the prediction for the observed dominant antenna path. Predictions for both paths are available in "Regression Predictions".<br>Calibrated band/path models and applied trial coefficients are saved in this browser for later sessions. Calibrate updates the protected Model but does not overwrite or apply the Trial.</p>
       <div class="grid two" style="margin-bottom:10px;">
         <div>
           <label for="visualDate">Visual date UTC</label>
@@ -597,8 +726,26 @@
     const BANDS = [40, 30, 20];
     const COEFFICIENTS = ["constant", "dark_delta", "greyline_delta", "endpoint_twilight"];
     const COEFFICIENT_STORAGE_KEY = "longPathBandPathCoefficientState.v2";
-    const SELECTED_PATH_STORAGE_KEY = "longPathSelectedPath.v1";
+    const SELECTED_PATH_STORAGE_KEY = "longPathSelectedPath.v2";
     const ENDPOINT_RADII_KM = [1800, 1200, 900, 600, 300, 200, 100, 50];
+    const WSPR_ACTIVITY_BANDS = [
+      {band: 1, label: "160m"}, {band: 3, label: "80m"}, {band: 5, label: "60m"},
+      {band: 7, label: "40m"}, {band: 10, label: "30m"}, {band: 14, label: "20m"},
+      {band: 18, label: "17m"}, {band: 21, label: "15m"}, {band: 24, label: "12m"},
+      {band: 28, label: "10m"}, {band: 50, label: "6m"}
+    ];
+    const WSPR_LIVE_ACTIVITY_ENABLED = false;
+    let wsprActivityRequestSeq = 0;
+    const DAILY_MATRIX_FAVORITES_KEY = "longPathDailyMatrixFavorites.v1";
+    const DAILY_MATRIX_BANDS = WSPR_ACTIVITY_BANDS.filter(item => ![5, 50].includes(item.band));
+    let dailyMatrixLastReport = null;
+    let dailyMatrixCountMode = "raw";
+    const DAILY_MATRIX_COUNT_MODES = ["raw", "unique", "cumulative"];
+    const DAILY_MATRIX_COUNT_LABELS = {
+      raw: "Raw Spots",
+      unique: "Unique Beacons Per Bin",
+      cumulative: "Cumulative Unique Beacons"
+    };
     const VALIDATED_PATHS = [{
       id: "brisbane_frankfurt_vk4emm",
       cities: ["Brisbane, Australia", "Frankfurt, Germany"],
@@ -2528,6 +2675,494 @@ const CITIES = {
       return result;
     }
 
+    function wsprActivityConfidence(spots, txCount, rxCount) {
+      if (spots >= 12 && txCount >= 3 && rxCount >= 3) return "high";
+      if (spots >= 4 && txCount >= 2 && rxCount >= 2) return "medium";
+      if (spots > 0) return "low";
+      return "none";
+    }
+
+    function renderWsprActivityPlaceholders(message) {
+      $("wsprActivityGrid").innerHTML = WSPR_ACTIVITY_BANDS.map(item => `
+        <div class="wspr-activity-band">
+          <div class="wspr-activity-band-name">${item.label}</div>
+          <div class="wspr-activity-band-state">${esc(message)}</div>
+        </div>`).join("");
+    }
+
+    function wsprSqlNumber(value) {
+      return Number(value).toFixed(6);
+    }
+
+    function buildWsprActivityQuery(path) {
+      const aLat = wsprSqlNumber(path.cityA.lat);
+      const aLon = wsprSqlNumber(path.cityA.lon);
+      const bLat = wsprSqlNumber(path.cityB.lat);
+      const bLon = wsprSqlNumber(path.cityB.lon);
+      const radiusAM = Math.round(path.radiusA * 1000);
+      const radiusBM = Math.round(path.radiusB * 1000);
+      const bands = WSPR_ACTIVITY_BANDS.map(item => item.band).join(",");
+      return `
+SELECT
+  band,
+  count() AS spots,
+  toString(max(time)) AS latest_utc,
+  uniq(tx_sign) AS tx_count,
+  uniq(rx_sign) AS rx_count,
+  argMax(tx_sign, time) AS latest_tx,
+  argMax(rx_sign, time) AS latest_rx
+FROM wspr.rx
+WHERE
+  time >= subtractMinutes(now(), 30)
+  AND band IN (${bands})
+  AND (
+    (
+      greatCircleDistance(tx_lon, tx_lat, ${aLon}, ${aLat}) <= ${radiusAM}
+      AND greatCircleDistance(rx_lon, rx_lat, ${bLon}, ${bLat}) <= ${radiusBM}
+    )
+    OR
+    (
+      greatCircleDistance(tx_lon, tx_lat, ${bLon}, ${bLat}) <= ${radiusBM}
+      AND greatCircleDistance(rx_lon, rx_lat, ${aLon}, ${aLat}) <= ${radiusAM}
+    )
+  )
+GROUP BY band
+ORDER BY band
+FORMAT JSONCompact`.trim();
+    }
+
+    function wsprActivityRowsToMap(json) {
+      const map = new Map();
+      (json && Array.isArray(json.data) ? json.data : []).forEach(row => {
+        map.set(Number(row[0]), {
+          band: Number(row[0]), spots: Number(row[1] || 0), latestUtc: row[2] || "",
+          txCount: Number(row[3] || 0), rxCount: Number(row[4] || 0),
+          latestTx: row[5] || "", latestRx: row[6] || ""
+        });
+      });
+      return map;
+    }
+
+    function renderWsprActivityResults(path, bandMap) {
+      const totalSpots = [...bandMap.values()].reduce((sum, row) => sum + row.spots, 0);
+      const txCount = [...bandMap.values()].reduce((sum, row) => sum + row.txCount, 0);
+      const rxCount = [...bandMap.values()].reduce((sum, row) => sum + row.rxCount, 0);
+      const activeBands = WSPR_ACTIVITY_BANDS.filter(item => bandMap.has(item.band));
+      const confidence = wsprActivityConfidence(totalSpots, txCount, rxCount);
+      const refreshed = new Date().toISOString().slice(11, 16);
+      const nameA = path.cityA.city || path.cityAName.split(",")[0];
+      const nameB = path.cityB.city || path.cityBName.split(",")[0];
+      $("wsprActivityMeta").textContent = `${nameA} area ${path.radiusA.toLocaleString()} km <> ${nameB} area ${path.radiusB.toLocaleString()} km | live UTC now | last 30 minutes | refreshed ${refreshed} UTC`;
+      $("wsprActivityStatus").innerHTML = activeBands.length
+        ? `<strong>${activeBands.length}</strong> active band${activeBands.length === 1 ? "" : "s"} | ${totalSpots.toLocaleString()} observed spot${totalSpots === 1 ? "" : "s"} | activity evidence confidence: <strong>${confidence.toUpperCase()}</strong>`
+        : "No matching WSPR reports were observed in the last 30 minutes between the selected endpoint areas. Activity evidence confidence: LOW.";
+      $("wsprActivityGrid").innerHTML = WSPR_ACTIVITY_BANDS.map(item => {
+        const row = bandMap.get(item.band);
+        if (!row) return `<div class="wspr-activity-band"><div class="wspr-activity-band-name">${item.label}</div><div class="wspr-activity-band-state">No matching observed spots<br>in last 30 minutes</div></div>`;
+        const bandConfidence = wsprActivityConfidence(row.spots, row.txCount, row.rxCount).toUpperCase();
+        return `<div class="wspr-activity-band open">
+          <div class="wspr-activity-band-name">${item.label}</div>
+          <div class="wspr-activity-band-state"><strong>${row.spots.toLocaleString()} observed spot${row.spots === 1 ? "" : "s"}</strong><br>Latest ${String(row.latestUtc).slice(11, 16)} UTC<br>${row.txCount.toLocaleString()} TX | ${row.rxCount.toLocaleString()} RX<br>Latest TX ${esc(row.latestTx || "?")} | RX ${esc(row.latestRx || "?")}<br>Confidence ${bandConfidence}</div>
+        </div>`;
+      }).join("");
+    }
+
+    async function refreshWsprActivity() {
+      if (!WSPR_LIVE_ACTIVITY_ENABLED) return;
+      const path = app.selectedPath;
+      if (!path) {
+        $("wsprActivityMeta").textContent = "Apply a selected path, then refresh to check recent observed WSPR activity.";
+        $("wsprActivityStatus").textContent = "Waiting for an applied selected path.";
+        renderWsprActivityPlaceholders("Waiting for applied path");
+        return;
+      }
+      const seq = ++wsprActivityRequestSeq;
+      const nameA = path.cityA.city || path.cityAName.split(",")[0];
+      const nameB = path.cityB.city || path.cityBName.split(",")[0];
+      $("wsprActivityMeta").textContent = `${nameA} area ${path.radiusA.toLocaleString()} km <> ${nameB} area ${path.radiusB.toLocaleString()} km | querying wspr.live`;
+      $("wsprActivityStatus").textContent = "Loading recent observed WSPR activity from wspr.live...";
+      renderWsprActivityPlaceholders("Checking wspr.live");
+      try {
+        const query = buildWsprActivityQuery(path);
+        const response = await fetch(`https://db1.wspr.live/?query=${encodeURIComponent(query)}`, {method: "GET"});
+        if (seq !== wsprActivityRequestSeq) return;
+        if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`);
+        renderWsprActivityResults(path, wsprActivityRowsToMap(await response.json()));
+      } catch (error) {
+        if (seq !== wsprActivityRequestSeq) return;
+        $("wsprActivityMeta").textContent = `${nameA} <> ${nameB} | wspr.live request failed`;
+        $("wsprActivityStatus").textContent = "Unable to load WSPR activity now. wspr.live may be unavailable, rate-limited, or blocked by the browser.";
+        renderWsprActivityPlaceholders("WSPR unavailable");
+        console.warn("WSPR activity query failed", error);
+      }
+    }
+
+    function dailySlotLabel(slot){const minutes=slot*30;return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
+    function dailyTotals(matrix){return DAILY_MATRIX_BANDS.map(item=>matrix.reduce((sum,slot)=>sum+(slot.get(item.band)||0),0));}
+    function dailyFinalTotals(matrix){const last=matrix[matrix.length-1]||new Map();return DAILY_MATRIX_BANDS.map(item=>last.get(item.band)||0);}
+    function dailySummaryTotals(matrix,mode){return mode==="cumulative"?dailyFinalTotals(matrix):dailyTotals(matrix);}
+    function dailySummaryLabel(mode){return mode==="cumulative"?"FINAL UNIQUE":"TOTAL";}
+    function dailyCell(count,max,pathNo){if(!count)return "";const alpha=(0.48+Math.sqrt(count/max)*0.44).toFixed(2);return ` style="background:rgba(${pathNo===1?"180,82,24":"25,92,150"},${alpha})"`;}
+    function dailyGlobalCell(count,max){if(!count)return "";const alpha=(0.48+Math.sqrt(count/max)*0.44).toFixed(2);return ` style="background:rgba(31,138,91,${alpha})"`;}
+
+    function populateDailyDestinationCities(pathNo, selectedName = "") {
+      const continent = $(`dailyCont${pathNo}`).value;
+      const citySelect = $(`dailyCity${pathNo}`);
+      citySelect.innerHTML = '<option value="">Select City</option>';
+      (CITIES[continent] || []).slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(city => {
+        const option=document.createElement("option"); option.value=city.name; option.textContent=city.name; citySelect.appendChild(option);
+      });
+      if ([...citySelect.options].some(option=>option.value===selectedName)) citySelect.value=selectedName;
+    }
+
+    function initDailyDestinationSelectors() {
+      const continents=Object.keys(CITIES).sort();
+      [1,2].forEach(pathNo => {
+        $(`dailyCont${pathNo}`).innerHTML=continents.map(continent=>`<option value="${esc(continent)}">${esc(continent)}</option>`).join("");
+        $(`dailyRadius${pathNo}`).innerHTML=ENDPOINT_RADII_KM.map(km=>`<option value="${km}">${km.toLocaleString()} km</option>`).join("");
+      });
+      $("dailyCont1").value="Europe"; populateDailyDestinationCities(1,"Frankfurt, Germany"); $("dailyRadius1").value="1800";
+      $("dailyCont2").value="North America"; populateDailyDestinationCities(2,"Denver, United States"); $("dailyRadius2").value="1800";
+    }
+
+    function selectedDailyDestination(pathNo) {
+      const continent=$(`dailyCont${pathNo}`).value, name=$(`dailyCity${pathNo}`).value, city=selectedCity(continent,name);
+      if(!city)return null;
+      return {continent,name,city,radiusKm:Number($(`dailyRadius${pathNo}`).value),label:`${city.city || name.split(",")[0]} area ${Number($(`dailyRadius${pathNo}`).value).toLocaleString()} km`};
+    }
+
+    function normalizeWsprHeader(value) {
+      return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+    }
+
+    function rowsFromHtmlTable(text) {
+      const doc = new DOMParser().parseFromString(text, "text/html");
+      const tables = [...doc.querySelectorAll("table")];
+      const table = tables.find(item => {
+        const headers = [...item.querySelectorAll("tr:first-child th, tr:first-child td")].map(cell => normalizeWsprHeader(cell.textContent));
+        return headers.includes("reporter") && (headers.includes("date") || headers.includes("timestamp") || headers.includes("time"));
+      });
+      if (!table) throw new Error("No WSPR spot-results table was found in the saved HTML file.");
+      return [...table.querySelectorAll("tr")].map(row => [...row.querySelectorAll("th,td")].map(cell => cell.textContent.trim())).filter(row => row.length);
+    }
+
+    function wsprCsvRows(text) {
+      text = text.replace(/^\uFEFF/, "");
+      const rows = []; let row = [], field = "", inQuotes = false;
+      for (let index = 0; index < text.length; index++) {
+        const char = text[index], next = text[index + 1];
+        if (inQuotes) {
+          if (char === '"' && next === '"') { field += '"'; index++; }
+          else if (char === '"') inQuotes = false;
+          else field += char;
+        } else if (char === '"') inQuotes = true;
+        else if (char === ",") { row.push(field); field = ""; }
+        else if (char === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+        else if (char !== "\r") field += char;
+      }
+      if (field.length || row.length) { row.push(field); rows.push(row); }
+      return rows.filter(item => item.some(value => String(value).trim()));
+    }
+
+    function wsprRowsFromText(text, filename) {
+      if (/\.json$/i.test(filename) || /^\s*[\[{]/.test(text)) {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed?.headers) && Array.isArray(parsed?.rows)) return [parsed.headers, ...parsed.rows];
+        if (Array.isArray(parsed) && parsed.length && typeof parsed[0] === "object" && !Array.isArray(parsed[0])) {
+          const headers = [...new Set(parsed.flatMap(row => Object.keys(row)))];
+          return [headers, ...parsed.map(row => headers.map(header => row[header] ?? ""))];
+        }
+        throw new Error("The JSON file needs a headers/rows structure or an array of spot objects.");
+      }
+      return /\.html?$/i.test(filename) || /<table[\s>]/i.test(text) ? rowsFromHtmlTable(text) : wsprCsvRows(text);
+    }
+
+    function wsprColumnIndex(headers, aliases) {
+      const normalized = headers.map(normalizeWsprHeader);
+      return aliases.map(normalizeWsprHeader).map(alias => normalized.indexOf(alias)).find(index => index >= 0) ?? -1;
+    }
+
+    function mergeWsprFileRows(fileResults) {
+      if (!fileResults.length) throw new Error("Select at least one saved WSPRnet results file.");
+      const headers = fileResults[0].rows[0];
+      const canonicalHeaders = headers.map(normalizeWsprHeader);
+      const unique = new Map();
+      const raw = [];
+      let importedRows = 0;
+      fileResults.forEach(result => {
+        const sourceHeaders = result.rows[0];
+        const sourceNormalized = sourceHeaders.map(normalizeWsprHeader);
+        const indexes = canonicalHeaders.map(header => sourceNormalized.indexOf(header));
+        if (indexes.some(index => index < 0)) throw new Error(`${result.name} does not contain the same WSPRnet columns as the other selected files.`);
+        result.rows.slice(1).forEach(row => {
+          importedRows++;
+          const normalizedRow = indexes.map(index => row[index] ?? "");
+          raw.push(normalizedRow);
+          unique.set(JSON.stringify(normalizedRow), normalizedRow);
+        });
+      });
+      return {
+        rows: [headers, ...unique.values()],
+        rawRows: [headers, ...raw],
+        importedRows,
+        duplicateRows: importedRows - unique.size,
+        rowLimitFiles: fileResults.filter(result => result.rows.length - 1 >= 10000).map(result => result.name)
+      };
+    }
+
+    function reporterFromWsprRows(rows) {
+      if (rows.length < 2) throw new Error("The imported file contains no spot rows.");
+      const reporterIndex = wsprColumnIndex(rows[0], ["reporter", "rx_call", "rxcall", "receiver"]);
+      if (reporterIndex < 0) throw new Error("The imported file does not contain a Reporter column.");
+      const reporters = [...new Set(rows.slice(1).map(row => String(row[reporterIndex] || "").trim().toUpperCase()).filter(Boolean))];
+      if (!reporters.length) throw new Error("No reporter callsign was found in the imported file.");
+      if (reporters.length > 1) throw new Error(`Single Reporter Matrix requires one reporter. Imported files contain: ${reporters.join(", ")}.`);
+      return reporters[0];
+    }
+
+    async function detectDailyReporter() {
+      const files = [...$("dailyWsprnetFile").files];
+      if (!files.length) {
+        $("dailyReporter").value = "";
+        return;
+      }
+      try {
+        const fileResults = [];
+        for (const file of files) fileResults.push({name:file.name, rows:wsprRowsFromText(await file.text(), file.name)});
+        const reporter = reporterFromWsprRows(mergeWsprFileRows(fileResults).rows);
+        $("dailyReporter").value = reporter;
+        $("dailyMatrixStatus").textContent = `Reporter ${reporter} identified from ${files.length} selected WSPRnet file${files.length === 1 ? "" : "s"}.`;
+      } catch (error) {
+        $("dailyReporter").value = "";
+        $("dailyMatrixStatus").textContent = `Unable to identify one reporter: ${error.message}`;
+      }
+    }
+
+    function wsprBandFromFrequency(value) {
+      const mhz = Number(String(value || "").replace(/[^\d.]+/g, ""));
+      if (!Number.isFinite(mhz)) return null;
+      if (mhz < 2.5) return 1; if (mhz < 4.5) return 3; if (mhz < 6) return 5;
+      if (mhz < 8.5) return 7; if (mhz < 12) return 10; if (mhz < 16) return 14;
+      if (mhz < 20) return 18; if (mhz < 23) return 21; if (mhz < 26.5) return 24;
+      if (mhz < 35) return 28; if (mhz < 55) return 50;
+      return null;
+    }
+
+    function wsprBandFromValue(value) {
+      const text = String(value || "").trim().toLowerCase();
+      const number = Number(text.replace(/[^\d.]+/g, ""));
+      if (!Number.isFinite(number)) return null;
+      const metresToMhz = new Map([[160,1],[80,3],[60,5],[40,7],[30,10],[20,14],[17,18],[15,21],[12,24],[10,28],[6,50]]);
+      if (text.includes("m") || metresToMhz.has(number)) return metresToMhz.get(number) || null;
+      const exact = WSPR_ACTIVITY_BANDS.find(item => item.band === number);
+      return exact ? exact.band : wsprBandFromFrequency(number);
+    }
+
+    function parseWsprUtc(value) {
+      const clean = String(value || "").trim().replace(/\//g, "-");
+      const match = clean.match(/(\d{4}-\d{2}-\d{2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      if (!match) return null;
+      const date = new Date(`${match[1]}T${match[2].padStart(2, "0")}:${match[3]}:${match[4] || "00"}Z`);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function importedReporterMatrix(rows, reporter, dateStr, path1, path2, countMode = "raw") {
+      if (rows.length < 2) throw new Error("The imported file contains no spot rows.");
+      const headers = rows[0];
+      const reporterIndex = wsprColumnIndex(headers, ["reporter", "rx_call", "rxcall", "receiver"]);
+      const dateIndex = wsprColumnIndex(headers, ["date", "timestamp", "time", "datetime", "dateutc"]);
+      const frequencyIndex = wsprColumnIndex(headers, ["mhz", "frequency", "freq"]);
+      const bandIndex = wsprColumnIndex(headers, ["band", "band_m", "bandm"]);
+      const gridIndex = wsprColumnIndex(headers, ["grid", "tx_grid", "txgrid", "beacongrid"]);
+      const callIndex = wsprColumnIndex(headers, ["call", "callsign", "tx_call", "txcall", "beacon"]);
+      const aggregateIndex = wsprColumnIndex(headers, ["# Spots", "spots", "spotcount", "count"]);
+      if (reporterIndex < 0 || dateIndex < 0 || gridIndex < 0 || (frequencyIndex < 0 && bandIndex < 0)) {
+        throw new Error("Required columns were not found. The file needs Reporter, Date/Timestamp, beacon Grid, and MHz/Frequency or Band.");
+      }
+      if (countMode !== "raw" && callIndex < 0) throw new Error("Unique beacon counting requires a beacon Call column.");
+      if (aggregateIndex >= 0 && rows.slice(1).some(row => Number(row[aggregateIndex] || 1) > 1)) {
+        throw new Error("This WSPRnet file contains aggregated '# Spots' rows. Run the WSPRnet query again with Unique unchecked so each spot keeps its own timestamp.");
+      }
+      const matrix1 = Array.from({length:48},()=>new Map());
+      const matrix2 = Array.from({length:48},()=>new Map());
+      const globalMatrix = Array.from({length:48},()=>new Map());
+      const unique1 = new Set(), unique2 = new Set(), uniqueGlobal = new Set();
+      const globalPeriodUnique = new Map();
+      let matchingRows = 0, wrongReporter = 0, wrongDate = 0, unreadable = 0;
+      let maxSourceSlot = -1;
+      const sourceTimes = [];
+      const matchingBands = new Set();
+      const dataRows = rows.slice(1);
+      if (countMode === "cumulative") {
+        dataRows.sort((a,b) => {
+          const aTime = parseWsprUtc(a[dateIndex])?.getTime() ?? 0;
+          const bTime = parseWsprUtc(b[dateIndex])?.getTime() ?? 0;
+          return aTime - bTime;
+        });
+      }
+      dataRows.forEach(row => {
+        if (String(row[reporterIndex] || "").trim().toUpperCase() !== reporter) { wrongReporter++; return; }
+        const date = parseWsprUtc(row[dateIndex]);
+        if (!date) { unreadable++; return; }
+        if (date.toISOString().slice(0, 10) !== dateStr) { wrongDate++; return; }
+        const band = bandIndex >= 0 ? wsprBandFromValue(row[bandIndex]) : wsprBandFromFrequency(row[frequencyIndex]);
+        if (!band || !DAILY_MATRIX_BANDS.some(item => item.band === band)) { unreadable++; return; }
+        sourceTimes.push(date.getTime());
+        const slot = date.getUTCHours() * 2 + (date.getUTCMinutes() >= 30 ? 1 : 0);
+        maxSourceSlot = Math.max(maxSourceSlot, slot);
+        const beacon=callIndex>=0?String(row[callIndex]||"").trim().toUpperCase():"";
+        if(beacon){
+          if(!globalPeriodUnique.has(band))globalPeriodUnique.set(band,new Set());
+          globalPeriodUnique.get(band).add(beacon);
+        }
+        const countPath=(matrix,seen,pathNo)=>{
+          if(countMode!=="raw"){
+            const key=countMode==="cumulative"?`${pathNo}|${band}|${beacon}`:`${pathNo}|${slot}|${band}|${beacon}`;
+            if(!beacon||seen.has(key))return false;
+            seen.add(key);
+          }
+          matrix[slot].set(band,(matrix[slot].get(band)||0)+1);
+          return true;
+        };
+        countPath(globalMatrix,uniqueGlobal,"global");
+        let beaconLat,beaconLon;
+        try { [beaconLat,beaconLon]=maidenheadToLatLon(row[gridIndex]); } catch { unreadable++; return; }
+        const inPath1=haversineKm(beaconLat,beaconLon,path1.city.lat,path1.city.lon)<=path1.radiusKm;
+        const inPath2=haversineKm(beaconLat,beaconLon,path2.city.lat,path2.city.lon)<=path2.radiusKm;
+        if(!inPath1&&!inPath2)return;
+        const counted1=inPath1&&countPath(matrix1,unique1,1);
+        const counted2=inPath2&&countPath(matrix2,unique2,2);
+        matchingBands.add(band);
+        if(counted1||counted2)matchingRows++;
+      });
+      const earliestUtc = sourceTimes.length ? new Date(Math.min(...sourceTimes)).toISOString().slice(11, 16) : "";
+      const latestUtc = sourceTimes.length ? new Date(Math.max(...sourceTimes)).toISOString().slice(11, 16) : "";
+      const activeSlots = Array.from({length:48},(_,slot)=>matrix1[slot].size||matrix2[slot].size).filter(Boolean).length;
+      const observedSpanMinutes = sourceTimes.length > 1 ? Math.round((Math.max(...sourceTimes) - Math.min(...sourceTimes)) / 60000) : 0;
+      const bandsPresent = DAILY_MATRIX_BANDS.filter(item => matchingBands.has(item.band)).map(item => item.label);
+      const globalPeriodUniqueTotals=DAILY_MATRIX_BANDS.map(item=>globalPeriodUnique.get(item.band)?.size||0);
+      if(countMode==="cumulative"){
+        [matrix1,matrix2,globalMatrix].forEach(matrix=>{
+          const running=new Map();
+          for(let slot=0;slot<48;slot++){
+            DAILY_MATRIX_BANDS.forEach(item=>{
+              if(slot>maxSourceSlot){matrix[slot].delete(item.band);return;}
+              const total=(running.get(item.band)||0)+(matrix[slot].get(item.band)||0);
+              if(total) matrix[slot].set(item.band,total);
+              else matrix[slot].delete(item.band);
+              running.set(item.band,total);
+            });
+          }
+        });
+      }
+      return {matrix1,matrix2,globalMatrix,globalPeriodUniqueTotals,matchingRows,sourceRows:sourceTimes.length,importedRows:rows.length-1,wrongReporter,wrongDate,unreadable,earliestUtc,latestUtc,activeSlots,observedSpanMinutes,bandsPresent};
+    }
+
+    function matrixModelMarkers(reporter,dateStr,destination) {
+      const markers=new Map();
+      if(reporter!=="VK4EMM" || destination.name!=="Frankfurt, Germany")return markers;
+      const pathModel=VALIDATED_PATHS.find(item=>item.id==="brisbane_frankfurt_vk4emm");
+      if(!pathModel)return markers;
+      const predByKey=predictionByTruthKey();
+      const bandMap=new Map([[7,40],[10,30],[14,20]]);
+      bandMap.forEach((bandM,wsprBand)=>{
+        const truth=app.truth.filter(row=>row.date_utc===dateStr&&Number(row.band_m)===bandM);
+        if(!truth.length)return;
+        const short=diagnosticR2(truth,predByKey,"short"),long=diagnosticR2(truth,predByKey,"long");
+        truth.forEach(row=>{
+          const prediction=predByKey.get(`${dateStr}|${bandM}|${row.slot_index}`); if(!prediction)return;
+          const score=Number(prediction.simple_model_path_dominance_score);
+          const path=score>0?"short":score<0?"long":null; if(!path)return;
+          const evidence=path==="short"?short:long;
+          if(evidence.r2===null||evidence.r2<0.8||evidence.bins<4||evidence.spots<20)return;
+          markers.set(`${row.slot_index}|${wsprBand}`,{label:path==="short"?"SP":"LP",path,r2:evidence.r2,model:pathModel.label});
+        });
+      });
+      return markers;
+    }
+
+    function matrixCellContent(count,marker) {
+      if(!count)return "";
+      const badge=marker?`<span class="daily-model-marker ${marker.path==="long"?"lp":"sp"}" title="${esc(marker.model)} | ${marker.label} model indication | path R2 ${fmtR2(marker.r2)}">${marker.label} MODEL</span>`:"";
+      return `${count}${badge}`;
+    }
+
+    function matrixBandFooter(columnSets = 1) {
+      let html=`<tr><th class="slot-cell">BAND</th>`;
+      for(let set=0;set<columnSets;set++) DAILY_MATRIX_BANDS.forEach(item=>html+=`<th>${item.label}</th>`);
+      return `${html}</tr>`;
+    }
+
+    function renderGlobalReporterMatrix(report) {
+      const max=Math.max(1,...report.globalMatrix.flatMap(slot=>[...slot.values()]));
+      const periodLabel=report.countMode==="raw"?"PERIOD RAW":"PERIOD UNIQUE";
+      const periodTotals=report.countMode==="raw"?dailyTotals(report.globalMatrix):report.globalPeriodUniqueTotals;
+      const summaryLabel=report.countMode==="cumulative"?"FINAL UNIQUE":"BIN SUM";
+      const summaryTotals=report.countMode==="cumulative"?dailyFinalTotals(report.globalMatrix):dailyTotals(report.globalMatrix);
+      let html=`<table class="daily-matrix-table daily-global-table"><thead><tr><th>UTC</th><th colspan="${DAILY_MATRIX_BANDS.length}">${esc(report.reporter)} | ALL DESTINATIONS</th></tr><tr><th>UTC</th>`;
+      DAILY_MATRIX_BANDS.forEach(item=>html+=`<th>${item.label}</th>`); html+=`</tr></thead><tbody>`;
+      for(let slot=0;slot<48;slot++){html+=`<tr><td class="slot-cell">${dailySlotLabel(slot)}</td>`;DAILY_MATRIX_BANDS.forEach(item=>{const n=report.globalMatrix[slot].get(item.band)||0;html+=`<td class="${n?"has-spots":""}"${dailyGlobalCell(n,max)}>${n||""}</td>`});html+=`</tr>`;}
+      html+=`<tr><td class="slot-cell">${summaryLabel}</td>${summaryTotals.map(n=>`<td>${n||""}</td>`).join("")}</tr><tr><td class="slot-cell">${periodLabel}</td>${periodTotals.map(n=>`<td>${n||""}</td>`).join("")}</tr>${matrixBandFooter()}</tbody></table>`;
+      $("dailyGlobalMatrixWrap").innerHTML=html;
+      $("dailyGlobalScope").textContent="The All Destinations matrix below is not filtered by any path.";
+    }
+
+    function renderDailyMatrix(report){
+      const max=Math.max(1,...report.matrix1.flatMap(slot=>[...slot.values()]),...report.matrix2.flatMap(slot=>[...slot.values()]));
+      const markers1=matrixModelMarkers(report.reporter,report.dateStr,report.path1),markers2=matrixModelMarkers(report.reporter,report.dateStr,report.path2);
+      let html=`<table class="daily-matrix-table"><thead><tr><th rowspan="2">UTC</th><th class="path1-head" colspan="${DAILY_MATRIX_BANDS.length}">PATH 1 | ${esc(report.reporter)} &lt;&gt; ${esc(report.path1.continent)}<span class="daily-path-scope">${esc(report.path1.name)} centred | ${report.path1.radiusKm.toLocaleString()} km radius</span></th><th class="path2-head" colspan="${DAILY_MATRIX_BANDS.length}">PATH 2 | ${esc(report.reporter)} &lt;&gt; ${esc(report.path2.continent)}<span class="daily-path-scope">${esc(report.path2.name)} centred | ${report.path2.radiusKm.toLocaleString()} km radius</span></th></tr><tr>`;
+      DAILY_MATRIX_BANDS.forEach(item=>html+=`<th>${item.label}</th>`); DAILY_MATRIX_BANDS.forEach(item=>html+=`<th>${item.label}</th>`); html+=`</tr></thead><tbody>`;
+      for(let slot=0;slot<48;slot++){html+=`<tr><td class="slot-cell">${dailySlotLabel(slot)}</td>`;
+        DAILY_MATRIX_BANDS.forEach(item=>{const n=report.matrix1[slot].get(item.band)||0,m=markers1.get(`${slot}|${item.band}`);html+=`<td class="${n?"has-spots":""}"${dailyCell(n,max,1)}>${matrixCellContent(n,m)}</td>`});
+        DAILY_MATRIX_BANDS.forEach(item=>{const n=report.matrix2[slot].get(item.band)||0,m=markers2.get(`${slot}|${item.band}`);html+=`<td class="${n?"has-spots":""}"${dailyCell(n,max,2)}>${matrixCellContent(n,m)}</td>`});html+=`</tr>`;}
+      html+=`<tr><td class="slot-cell">${dailySummaryLabel(report.countMode)}</td>${dailySummaryTotals(report.matrix1,report.countMode).map(n=>`<td>${n||""}</td>`).join("")}${dailySummaryTotals(report.matrix2,report.countMode).map(n=>`<td>${n||""}</td>`).join("")}</tr>${matrixBandFooter(2)}</tbody></table>`; $("dailyMatrixWrap").innerHTML=html;
+      renderGlobalReporterMatrix(report);
+      const total1=dailySummaryTotals(report.matrix1,report.countMode).reduce((a,b)=>a+b,0),total2=dailySummaryTotals(report.matrix2,report.countMode).reduce((a,b)=>a+b,0);
+      const coverage = report.sourceRows ? `${report.earliestUtc}-${report.latestUtc} UTC; destination spots present in ${report.activeSlots} of 48 bins` : "no matching source time coverage";
+      const rowLimitWarning = report.rowLimitFiles.length ? ` | <strong>WSPRNET ROW LIMIT REACHED:</strong> ${report.rowLimitFiles.length} selected file${report.rowLimitFiles.length===1?"":"s"} may be truncated` : "";
+      const spanWarning = report.observedSpanMinutes < 1380 ? " | <strong>LIMITED OBSERVED TIME SPAN:</strong> blank bins may be outside the WSPRnet query period" : "";
+      const duplicateNote = report.duplicateRows ? ` | ${report.duplicateRows.toLocaleString()} exact duplicate imported rows removed` : "";
+      $("dailyMatrixStatus").innerHTML=`Two-path reporter matrix ready | <strong>${esc(report.reporter)}</strong> | ${esc(report.dateStr)} UTC | counting: <strong>${esc(DAILY_MATRIX_COUNT_LABELS[report.countMode]||report.countMode)}</strong> | Path 1: ${total1.toLocaleString()} counts | Path 2: ${total2.toLocaleString()} counts | bands present: ${esc(report.bandsPresent.join(", ")||"none")} | ${report.rawImportedRows.toLocaleString()} imported rows${duplicateNote} | coverage ${coverage}${rowLimitWarning}${spanWarning} | sources: ${report.filenames.length.toLocaleString()} files`;
+    }
+
+    async function buildDailyMatrix(){
+      const dateStr=$("dailyMatrixDate").value,files=[...$("dailyWsprnetFile").files],path1=selectedDailyDestination(1),path2=selectedDailyDestination(2);
+      if(!isValidIsoDate(dateStr)){ $("dailyMatrixStatus").textContent="Enter the date as YYYY-MM-DD.";return;}
+      if(!path1||!path2){$("dailyMatrixStatus").textContent="Select both destination cities.";return;}
+      if(path1.continent===path2.continent&&path1.name===path2.name&&path1.radiusKm===path2.radiusKm){$("dailyMatrixStatus").textContent="Select two different destination areas.";return;}
+      if(!files.length){$("dailyMatrixStatus").textContent="Select one or more saved WSPRnet JSON, CSV, or HTML results files.";return;}
+      try{
+        $("dailyMatrixStatus").textContent=`Reading ${files.length} saved WSPRnet results file${files.length===1?"":"s"}...`;
+        const fileResults=[];
+        for(const file of files) fileResults.push({name:file.name,rows:wsprRowsFromText(await file.text(),file.name)});
+        const merged=mergeWsprFileRows(fileResults);
+        const reporter=reporterFromWsprRows(merged.rows);
+        $("dailyReporter").value=reporter;
+        const result=importedReporterMatrix(merged.rows,reporter,dateStr,path1,path2,dailyMatrixCountMode);
+        dailyMatrixLastReport={dateStr,reporter,path1,path2,countMode:dailyMatrixCountMode,filenames:files.map(file=>file.name),rawImportedRows:merged.importedRows,duplicateRows:merged.duplicateRows,rowLimitFiles:merged.rowLimitFiles,...result};renderDailyMatrix(dailyMatrixLastReport);
+      }catch(error){$("dailyMatrixStatus").textContent=`Unable to build the reporter matrix: ${error.message}`;console.warn(error);}
+    }
+
+    function toggleDailyCountMode() {
+      dailyMatrixCountMode = DAILY_MATRIX_COUNT_MODES[(DAILY_MATRIX_COUNT_MODES.indexOf(dailyMatrixCountMode)+1)%DAILY_MATRIX_COUNT_MODES.length];
+      document.querySelectorAll(".daily-count-mode-toggle").forEach(button=>{
+        button.textContent = `Counting: ${DAILY_MATRIX_COUNT_LABELS[dailyMatrixCountMode]}`;
+        button.setAttribute("aria-pressed", dailyMatrixCountMode==="raw"?"false":"true");
+      });
+      if ($("dailyWsprnetFile").files.length) buildDailyMatrix();
+    }
+
+    function dailyExportRows(report){const descriptions={raw:"Raw spots - every imported report row counted",unique:"Unique beacons per bin - each callsign counted once per 30-minute, band, and destination cell",cumulative:"Cumulative unique beacons - each callsign counted once across the UTC day, with running totals shown by time bin"};const globalSummaryLabel=report.countMode==="cumulative"?"Final unique":"Bin sum";const globalSummaryTotals=report.countMode==="cumulative"?dailyFinalTotals(report.globalMatrix):dailyTotals(report.globalMatrix);const periodLabel=report.countMode==="raw"?"Period raw":"Period unique";const periodTotals=report.countMode==="raw"?dailyTotals(report.globalMatrix):report.globalPeriodUniqueTotals;const rows=[["Report","Two-Path Single Reporter Daily WSPR Matrix"],["Reporter",report.reporter],["Date UTC",report.dateStr],["Counting mode",descriptions[report.countMode]||report.countMode],["Path 1",`${report.reporter} <> ${report.path1.continent}; ${report.path1.name} centred; ${report.path1.radiusKm} km radius`],["Path 2",`${report.reporter} <> ${report.path2.continent}; ${report.path2.name} centred; ${report.path2.radiusKm} km radius`],["Source files",report.filenames.join(" | ")],["Bands present in destination areas",report.bandsPresent.join(", ")],["Raw imported rows",report.rawImportedRows],["Exact duplicate imported rows removed",report.duplicateRows],["Distinct imported rows",report.importedRows],["Reporter/date source rows",report.sourceRows],["Destination-matching counts",report.matchingRows],["WSPRnet row-limit caution",report.rowLimitFiles.length?`${report.rowLimitFiles.length} source file(s) reached 10,000 rows and may be truncated`:"No source file reached 10,000 rows"],["Observed source time span UTC",report.sourceRows?`${report.earliestUtc}-${report.latestUtc}`:"none"],["Observed span minutes",report.observedSpanMinutes],["Bins containing destination spots",`${report.activeSlots} of 48`],["Coverage caution",report.observedSpanMinutes<1380?"Limited observed time span: blank bins may be outside the WSPRnet query period":"Observed source spots span most of the UTC day"],["UTC",...DAILY_MATRIX_BANDS.map(x=>`Path 1 ${x.label}`),...DAILY_MATRIX_BANDS.map(x=>`Path 2 ${x.label}`)]];for(let slot=0;slot<48;slot++)rows.push([dailySlotLabel(slot),...DAILY_MATRIX_BANDS.map(x=>report.matrix1[slot].get(x.band)||""),...DAILY_MATRIX_BANDS.map(x=>report.matrix2[slot].get(x.band)||"")]);rows.push([dailySummaryLabel(report.countMode),...dailySummaryTotals(report.matrix1,report.countMode),...dailySummaryTotals(report.matrix2,report.countMode)],[],["All Destinations Reporter Activity"],["UTC",...DAILY_MATRIX_BANDS.map(x=>x.label)]);for(let slot=0;slot<48;slot++)rows.push([dailySlotLabel(slot),...DAILY_MATRIX_BANDS.map(x=>report.globalMatrix[slot].get(x.band)||"")]);rows.push([globalSummaryLabel,...globalSummaryTotals],[periodLabel,...periodTotals]);return rows;}
+    function csvCell(value){const s=String(value??"");return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;}
+    function dailyFilename(report){return `wspr_single_reporter_matrix_${report.reporter}_${report.countMode || "raw"}_${report.dateStr}`.replace(/[<>|/:*?"\\]+/g,"_").replace(/\s+/g,"_").replace(/_+/g,"_");}
+    function exportDailyMatrixCsv(){if(!dailyMatrixLastReport){$("dailyMatrixStatus").textContent="Build the daily table before exporting CSV.";return;}downloadText(`${dailyFilename(dailyMatrixLastReport)}.csv`,dailyExportRows(dailyMatrixLastReport).map(row=>row.map(csvCell).join(",")).join("\n"),"text/csv;charset=utf-8");}
+    function printDailyMatrix(){
+      if(!dailyMatrixLastReport){$("dailyMatrixStatus").textContent="Build the daily table before printing.";return;}
+      const originalTitle=document.title; document.title=`${dailyFilename(dailyMatrixLastReport)}.pdf`; document.body.classList.add("daily-matrix-print");
+      const cleanup=()=>{document.body.classList.remove("daily-matrix-print");document.title=originalTitle;window.removeEventListener("afterprint",cleanup);};
+      window.addEventListener("afterprint",cleanup); setTimeout(()=>window.print(),80);
+    }
+
     function selectedCity(continent, cityName) {
       return CITIES[continent]?.find(city => city.name === cityName) || null;
     }
@@ -2603,7 +3238,7 @@ const CITIES = {
       $("selectedPathValidation").className = `validation-status${validated ? " exact" : ""}`;
       $("selectedPathValidation").textContent = validated
         ? `Exact directional-antenna validation model available: ${validated.label}. Source: ${validated.source}.`
-        : "No exact directional-antenna validation model is currently available for this selected path. WSPR activity may still be reported later, but it must not be presented as validated short-path or long-path evidence.";
+        : "No exact directional-antenna validation model is currently available for this selected path. General WSPR activity must not be presented as validated short-path or long-path evidence.";
     }
 
     function saveSelectedPath() {
@@ -2645,7 +3280,7 @@ const CITIES = {
         radius.innerHTML = ENDPOINT_RADII_KM.map(km => `<option value="${km}">${km.toLocaleString()} km</option>`).join("");
       });
       const today = new Date().toISOString().slice(0, 10);
-      let saved = {continentA: "Oceania", cityAName: "Brisbane, Australia", radiusA: 1200, continentB: "Europe", cityBName: "Frankfurt, Germany", radiusB: 1200, dateUtc: today};
+      let saved = {continentA: "Oceania", cityAName: "Brisbane, Australia", radiusA: 1800, continentB: "Europe", cityBName: "Frankfurt, Germany", radiusB: 1800, dateUtc: today};
       try { saved = {...saved, ...JSON.parse(localStorage.getItem(SELECTED_PATH_STORAGE_KEY) || "{}")}; } catch {}
       $("pathContA").value = saved.continentA;
       $("pathContB").value = saved.continentB;
@@ -3433,7 +4068,7 @@ const CITIES = {
       saveStoredCoefficientState();
       renderAll(false);
       restoreVisibleTrialDraft(band, pathId, visibleTrialDraft);
-      $("status").textContent = `${band}m ${path.label} Model coefficients calibrated and saved. Existing and un-applied Trial values were preserved.`;
+      $("status").textContent = `${band}m ${path.label} Model coefficients calibrated and saved. Applied and un-applied Trial values were preserved, so the chart remains on the applied Trial until Model is copied to Trial and applied.`;
     }
 
     function applyTrial(band, pathId) {
@@ -3468,7 +4103,7 @@ const CITIES = {
       app = {...app, ...rebuilt};
       saveStoredCoefficientState();
       renderAll(false);
-      $("status").textContent = `${band}m ${path.label} trial coefficients applied, saved in this browser, and written to the prediction table.`;
+      $("status").textContent = `${band}m ${path.label} Trial applied and saved. Its R2 and model bars are updated for slots where that antenna path is observed as dominant.`;
     }
 
     function copyModelToTrial(band, pathId) {
@@ -3532,7 +4167,11 @@ const CITIES = {
     }
 
     function diagnosticR2(rows, predByKey, pathKind = "all") {
-      const selected = rows.filter(row => Number(row.observation_count) > 0);
+      const selected = rows.filter(row => {
+        if (pathKind === "short") return Number(row.loop2_count) > 0;
+        if (pathKind === "long") return Number(row.loop3_count) > 0;
+        return Number(row.observation_count) > 0;
+      });
       const y = [];
       const pred = [];
       const weights = [];
@@ -3556,6 +4195,17 @@ const CITIES = {
         spots: selected.reduce((sum, row) => sum + (pathKind === "short" ? row.loop2_count : pathKind === "long" ? row.loop3_count : row.observation_count), 0),
         r2: y.length >= 2 ? r2Score(y, pred, weights) : null
       };
+    }
+
+    function pathCountR2ForBeta(rows, pathId, beta) {
+      if (!betaIsValid(beta)) return null;
+      const observedField = pathId === "short" ? "loop2_count" : "loop3_count";
+      const selected = rows.filter(row => Number(row[observedField]) > 0);
+      if (selected.length < 2) return null;
+      const observed = selected.map(row => Number(row[observedField]));
+      const predicted = selected.map(row => Number(row.observation_count) * predictPathShare(row, beta));
+      const weights = selected.map(row => Number(row.observation_count));
+      return r2Score(observed, predicted, weights);
     }
 
     function renderBandAnalysis() {
@@ -3631,6 +4281,9 @@ const CITIES = {
                 const pathModel = model.paths?.[path.id] || {};
                 const modelBeta = pathModel.modelBeta || [];
                 const activeBeta = pathModel.activeBeta || modelBeta;
+                const bandRows = app.truth.filter(row => Number(row.band_m) === Number(band));
+                const modelR2 = pathCountR2ForBeta(bandRows, path.id, modelBeta);
+                const trialR2 = pathCountR2ForBeta(bandRows, path.id, activeBeta);
                 return `
                   <div class="path-coeff-block">
                     <h3>${band}m ${path.label} Coefficients</h3>
@@ -3638,6 +4291,9 @@ const CITIES = {
                     <div></div>
                     <div class="coeff-head">Model</div>
                     <div class="coeff-head">Trial</div>
+                    <div class="coeff-r2-label">Current weighted R2</div>
+                    <div class="coeff-r2-value" title="R2 from the protected Model coefficients">${modelR2 === null ? "-" : fmtR2(modelR2)}</div>
+                    <div class="coeff-r2-value" title="R2 from the currently applied Trial coefficients">${trialR2 === null ? "-" : fmtR2(trialR2)}</div>
                     ${COEFFICIENTS.map((name, i) => `
                       <div class="coeff-row">
                         <label>${esc(coefficientLabel(name))}</label>
@@ -3882,7 +4538,7 @@ const CITIES = {
       const maxValue = Math.max(1, ...bandRows.flatMap(r => [
         r.loop2,
         r.loop3,
-        Math.max(r.modelLoop2, r.modelLoop3)
+        r.total > 0 ? (r.loop2 >= r.loop3 ? r.modelLoop2 : r.modelLoop3) : 0
       ]));
       const tickStep = Math.max(1, Math.ceil(maxValue / 4));
       const ticks = [];
@@ -3896,10 +4552,11 @@ const CITIES = {
       for (let slot = 0; slot < 48; slot++) {
         const item = bandRows[slot];
         const x = left + slot * slotW;
-        const modelIsShort = item.modelDominance >= 0;
+        const observedIsShort = item.loop2 >= item.loop3;
+        const modelValue = item.total > 0 ? (observedIsShort ? item.modelLoop2 : item.modelLoop3) : 0;
         const values = [
           ["obs-short", item.loop2, "Loop 2", "short-path", false],
-          [theoryDominanceClass(item.modelDominance), Math.max(item.modelLoop2, item.modelLoop3), "model", modelIsShort ? "short-path" : "long-path", true],
+          [observedIsShort ? "model-short" : "model-long", modelValue, "model", observedIsShort ? "short-path" : "long-path", true],
           ["obs-long", item.loop3, "Loop 3", "long-path", false]
         ];
         values.forEach(([klass, value, source, pathLabel, isModel], offset) => {
@@ -4160,6 +4817,18 @@ const CITIES = {
       $("selectedFileList").textContent = files.length ? files.map(f => f.name).join(", ") : "No files selected.";
     }
 
+    renderWsprActivityPlaceholders("Waiting for refresh");
+    $("dailyMatrixDate").value = new Date().toISOString().slice(0, 10);
+    initDailyDestinationSelectors();
+    $("dailyCont1").addEventListener("change",()=>populateDailyDestinationCities(1));
+    $("dailyCont2").addEventListener("change",()=>populateDailyDestinationCities(2));
+    $("openWsprnetQuery").addEventListener("click", () => window.open("https://www.wsprnet.org/drupal/wsprnet/spotquery", "_blank", "noopener"));
+    $("buildDailyMatrix").addEventListener("click", buildDailyMatrix);
+    $("dailyCountModeToggle").addEventListener("click", toggleDailyCountMode);
+    $("dailyGlobalCountModeToggle").addEventListener("click", toggleDailyCountMode);
+    $("dailyWsprnetFile").addEventListener("change", detectDailyReporter);
+    $("exportDailyMatrixCsv").addEventListener("click", exportDailyMatrixCsv);
+    $("printDailyMatrix").addEventListener("click", printDailyMatrix);
     $("pathContA").addEventListener("change", () => populatePathCities("A"));
     $("pathContB").addEventListener("change", () => populatePathCities("B"));
     ["pathCityA", "pathCityB", "pathRadiusA", "pathRadiusB", "selectedPathDate"].forEach(id => $(id).addEventListener("change", renderSelectedPathPreview));
