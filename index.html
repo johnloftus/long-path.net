@@ -139,6 +139,12 @@
     .wspr-activity-disclaimer { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
     .daily-matrix-controls { display: grid; grid-template-columns: 180px 180px minmax(280px, 1fr); gap: 10px; align-items: end; margin-top: 12px; }
     .daily-matrix-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .wspr-live-collector { margin-top: 14px; padding: 12px; border: 1px solid #8bcbae; border-radius: 6px; background: #f4fbf7; }
+    .wspr-live-collector h3 { margin: 0 0 5px; }
+    .wspr-live-collector-controls { display: grid; grid-template-columns: 200px 1fr; gap: 10px; align-items: end; }
+    .wspr-live-band-buttons { display: flex; flex-wrap: wrap; gap: 7px; }
+    .wspr-live-band-buttons button { min-width: 58px; }
+    .wspr-live-status { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.45; }
     .daily-matrix-status { margin-top: 12px; padding: 10px 12px; background: #f6f8fa; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
     .daily-matrix-wrap { overflow-x: auto; overflow-y: visible; max-height: none; margin-top: 12px; border: 1px solid var(--line); border-radius: 6px; }
     .daily-matrix-table { width: 720px; min-width: 720px; max-width: 720px; table-layout: fixed; font-size: 11px; }
@@ -567,6 +573,20 @@
         <div><label for="dailyMatrixDate">Date UTC</label><input id="dailyMatrixDate" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" maxlength="10"></div>
         <div><label for="dailyWsprnetFile">Saved WSPRnet results files</label><input id="dailyWsprnetFile" type="file" accept=".json,.csv,.html,.htm,application/json,text/csv,text/html" multiple></div>
       </div>
+      <div class="wspr-live-collector">
+        <h3>WSPR.live incremental collection</h3>
+        <p class="note">Enter the receiving station callsign, then request one band at a time. Each request uses the latest completed 30-minute UTC bin. The same band becomes available again in the next completed bin, allowing a user-driven UTC-day collection. A shared 15-second cooldown protects wspr.live. Collected spots can be built directly into the matrix or saved as JSON.</p>
+        <div class="wspr-live-collector-controls">
+          <div><label for="wsprLiveReceiver">Receiver callsign</label><input id="wsprLiveReceiver" type="text" maxlength="20" placeholder="e.g. VK4EMM" autocomplete="off" spellcheck="false"></div>
+          <div class="wspr-live-band-buttons" id="wsprLiveBandButtons"></div>
+        </div>
+        <div class="daily-matrix-toolbar">
+          <button id="buildCollectedWsprMatrix" type="button" disabled>Build Matrix from Collected Data</button>
+          <button id="saveCollectedWsprJson" class="secondary" type="button" disabled>Save Collected JSON</button>
+          <button id="clearCollectedWspr" class="secondary" type="button" disabled>Clear Collection</button>
+        </div>
+        <div class="wspr-live-status" id="wsprLiveStatus">No collection started. This feature makes no requests until a band button is pressed.</div>
+      </div>
       <div class="daily-path-selectors">
         <div class="daily-path-selector path1">
           <h3>Path 1 Destination</h3>
@@ -738,7 +758,14 @@
     let wsprActivityRequestSeq = 0;
     const DAILY_MATRIX_FAVORITES_KEY = "longPathDailyMatrixFavorites.v1";
     const DAILY_MATRIX_BANDS = WSPR_ACTIVITY_BANDS.filter(item => ![5, 50].includes(item.band));
+    const WSPR_LIVE_COOLDOWN_MS = 15 * 1000;
+    const WSPR_LIVE_HEADERS = ["Reporter", "Date", "Band", "Grid", "Call"];
+    let wsprLiveCollection = null;
+    let wsprLiveCooldownUntil = 0;
+    let wsprLiveRequestInFlight = false;
+    let wsprLiveCooldownTimer = null;
     let dailyMatrixLastReport = null;
+    let dailyMatrixSource = null;
     let dailyMatrixCountMode = "raw";
     const DAILY_MATRIX_COUNT_MODES = ["raw", "unique", "cumulative"];
     const DAILY_MATRIX_COUNT_LABELS = {
@@ -3125,6 +3152,143 @@ FORMAT JSONCompact`.trim();
       $("dailyMatrixStatus").innerHTML=`Two-path reporter matrix ready | <strong>${esc(report.reporter)}</strong> | ${esc(report.dateStr)} UTC | counting: <strong>${esc(DAILY_MATRIX_COUNT_LABELS[report.countMode]||report.countMode)}</strong> | Path 1: ${total1.toLocaleString()} counts | Path 2: ${total2.toLocaleString()} counts | bands present: ${esc(report.bandsPresent.join(", ")||"none")} | ${report.rawImportedRows.toLocaleString()} imported rows${duplicateNote} | coverage ${coverage}${rowLimitWarning}${spanWarning} | sources: ${report.filenames.length.toLocaleString()} files`;
     }
 
+    function latestCompleteWsprBin() {
+      const end = new Date(Math.floor(Date.now() / 1800000) * 1800000 - 1800000);
+      return { start: new Date(end.getTime() - 1800000), end };
+    }
+
+    function wsprLiveBinLabel(bin) {
+      return `${bin.start.toISOString().slice(0, 16).replace("T", " ")}–${bin.end.toISOString().slice(11, 16)} UTC`;
+    }
+
+    function wsprLiveDateTime(value) { return value.toISOString().slice(0, 19).replace("T", " "); }
+
+    function renderWsprLiveCollector() {
+      const receiver = $("wsprLiveReceiver").value.trim().toUpperCase();
+      const now = Date.now();
+      const cooldownRemaining = Math.max(0, wsprLiveCooldownUntil - now);
+      const targetBin = latestCompleteWsprBin();
+      const targetKey = targetBin.start.toISOString();
+      const locked = Boolean(wsprLiveCollection);
+      const nextDay = locked && targetBin.start.toISOString().slice(0, 10) !== wsprLiveCollection.dateStr;
+      const canRequest = !wsprLiveRequestInFlight && !cooldownRemaining && !nextDay && (!locked ? Boolean(receiver) : true);
+      const collectedBands = new Set((wsprLiveCollection?.requests || []).filter(request => request.binStart === targetKey).map(request => request.band));
+      $("wsprLiveBandButtons").innerHTML = DAILY_MATRIX_BANDS.map(item => {
+        const collected = collectedBands.has(item.band);
+        const disabled = !canRequest || collected;
+        return `<button class="secondary" type="button" data-wspr-live-band="${item.band}" title="${collected ? "Already collected for this UTC bin." : "Request this band from wspr.live."}" ${disabled ? "disabled" : ""}>${item.label}${collected ? " ✓" : ""}</button>`;
+      }).join("");
+      $("buildCollectedWsprMatrix").disabled = !(wsprLiveCollection?.rows.length);
+      $("saveCollectedWsprJson").disabled = !(wsprLiveCollection?.rows.length);
+      $("clearCollectedWspr").disabled = !wsprLiveCollection;
+      if (wsprLiveRequestInFlight) return;
+      if (wsprLiveCollection) {
+        const state = cooldownRemaining ? ` Next request available in ${Math.ceil(cooldownRemaining / 1000)} seconds.` : " Select another uncollected band or build the matrix.";
+        const outcome = wsprLiveCollection.lastOutcome ? ` Last request: ${wsprLiveCollection.lastOutcome}.` : "";
+        const binCount = new Set(wsprLiveCollection.requests.map(request => request.binStart)).size;
+        const dayLimit = nextDay ? " The UTC day is complete; use Clear Collection before starting the next day." : "";
+        $("wsprLiveStatus").textContent = `Collection: ${wsprLiveCollection.receiver} | UTC date ${wsprLiveCollection.dateStr} | current bin ${wsprLiveBinLabel(targetBin)} | ${wsprLiveCollection.rows.length.toLocaleString()} spots from ${wsprLiveCollection.requests.length} band requests across ${binCount} bins; ${collectedBands.size} of ${DAILY_MATRIX_BANDS.length} bands collected in this bin.${outcome}${dayLimit}${nextDay ? "" : state}`;
+      } else {
+        $("wsprLiveStatus").textContent = receiver ? "Ready. Press a band button to start a UTC-day collection using the latest completed 30-minute bin." : "Enter a receiver callsign. This feature makes no requests until a band button is pressed.";
+      }
+    }
+
+    function scheduleWsprLiveCooldownRender() {
+      clearTimeout(wsprLiveCooldownTimer);
+      if (wsprLiveCooldownUntil <= Date.now()) { renderWsprLiveCollector(); return; }
+      renderWsprLiveCollector();
+      wsprLiveCooldownTimer = setTimeout(scheduleWsprLiveCooldownRender, Math.min(1000, wsprLiveCooldownUntil - Date.now()));
+    }
+
+    function wsprLiveQuery(receiver, band, bin) {
+      return `SELECT toString(rx.time) AS spot_time, rx.band, rx.rx_sign, rx.tx_sign, rx.tx_loc FROM wspr.rx AS rx WHERE rx.time >= toDateTime('${wsprLiveDateTime(bin.start)}') AND rx.time < toDateTime('${wsprLiveDateTime(bin.end)}') AND rx.band = ${band} AND rx.rx_sign = '${receiver}' ORDER BY rx.time FORMAT JSONCompact`;
+    }
+
+    function wsprLiveRows(json) {
+      const names = (json.meta || []).map(column => column.name);
+      const index = name => names.indexOf(name);
+      const required = ["spot_time", "band", "rx_sign", "tx_sign", "tx_loc"];
+      if (!required.every(name => index(name) >= 0) || !Array.isArray(json.data)) throw new Error("wspr.live returned an unexpected result format.");
+      return json.data.map(row => [row[index("rx_sign")], row[index("spot_time")], row[index("band")], row[index("tx_loc")], row[index("tx_sign")]]);
+    }
+
+    async function collectWsprLiveBand(band) {
+      if (wsprLiveRequestInFlight || Date.now() < wsprLiveCooldownUntil) return;
+      const enteredReceiver = $("wsprLiveReceiver").value.trim().toUpperCase();
+      if (!wsprLiveCollection && !/^[A-Z0-9/]{1,20}$/.test(enteredReceiver)) {
+        $("wsprLiveStatus").textContent = "Enter a valid receiver callsign using letters, numbers, or /.";
+        return;
+      }
+      const targetBin = latestCompleteWsprBin();
+      if (!wsprLiveCollection) wsprLiveCollection = { receiver: enteredReceiver, dateStr:targetBin.start.toISOString().slice(0, 10), requests: [], rows: [] };
+      if (targetBin.start.toISOString().slice(0, 10) !== wsprLiveCollection.dateStr) {
+        $("wsprLiveStatus").textContent = "This collection is limited to one UTC day. Save it if required, then use Clear Collection before starting the next day.";
+        return;
+      }
+      if (wsprLiveCollection.requests.some(request => request.band === band && request.binStart === targetBin.start.toISOString())) return;
+      wsprLiveRequestInFlight = true;
+      $("wsprLiveReceiver").value = wsprLiveCollection.receiver;
+      $("wsprLiveReceiver").readOnly = true;
+      $("wsprLiveStatus").textContent = `Requesting ${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} for ${wsprLiveCollection.receiver}, ${wsprLiveBinLabel(targetBin)}...`;
+      renderWsprLiveCollector();
+      try {
+        const response = await fetch(`https://db1.wspr.live/?query=${encodeURIComponent(wsprLiveQuery(wsprLiveCollection.receiver, band, targetBin))}`, {method:"GET"});
+        if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`);
+        const rows = wsprLiveRows(await response.json());
+        const existing = new Set(wsprLiveCollection.rows.map(row => JSON.stringify(row)));
+        rows.forEach(row => { if (!existing.has(JSON.stringify(row))) wsprLiveCollection.rows.push(row); });
+        wsprLiveCollection.requests.push({band, binStart:targetBin.start.toISOString(), binEnd:targetBin.end.toISOString()});
+        wsprLiveCollection.lastOutcome = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} returned ${rows.length.toLocaleString()} spots`;
+        $("dailyReporter").value = wsprLiveCollection.receiver;
+        $("dailyMatrixDate").value = wsprLiveCollection.dateStr;
+      } catch (error) {
+        wsprLiveCollection.lastOutcome = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} failed (${error.message})`;
+        console.warn("wspr.live collection request failed", error);
+      } finally {
+        wsprLiveRequestInFlight = false;
+        wsprLiveCooldownUntil = Date.now() + WSPR_LIVE_COOLDOWN_MS;
+        scheduleWsprLiveCooldownRender();
+      }
+    }
+
+    function clearWsprLiveCollection() {
+      wsprLiveCollection = null;
+      wsprLiveCooldownUntil = 0;
+      clearTimeout(wsprLiveCooldownTimer);
+      $("wsprLiveReceiver").readOnly = false;
+      renderWsprLiveCollector();
+    }
+
+    function saveCollectedWsprJson() {
+      if (!wsprLiveCollection?.rows.length) return;
+      const collection = wsprLiveCollection;
+      const filename = `wspr_live_${collection.receiver}_${collection.dateStr}_UTC.json`;
+      const text = JSON.stringify({headers:WSPR_LIVE_HEADERS, rows:collection.rows, source:"wspr.live", receiver:collection.receiver, dateUtc:collection.dateStr, requests:collection.requests}, null, 2);
+      downloadText(filename, text, "application/json;charset=utf-8");
+      $("wsprLiveStatus").textContent = `Downloaded ${filename} using the browser's configured download folder.`;
+    }
+
+    function buildDailyMatrixFromRows(rows, reporter, dateStr, path1, path2, details) {
+      const result=importedReporterMatrix(rows,reporter,dateStr,path1,path2,dailyMatrixCountMode);
+      dailyMatrixLastReport={dateStr,reporter,path1,path2,countMode:dailyMatrixCountMode,filenames:details.filenames,rawImportedRows:details.rawImportedRows,duplicateRows:details.duplicateRows,rowLimitFiles:details.rowLimitFiles,...result};
+      renderDailyMatrix(dailyMatrixLastReport);
+    }
+
+    function buildCollectedWsprMatrix() {
+      const collection = wsprLiveCollection;
+      const path1=selectedDailyDestination(1),path2=selectedDailyDestination(2);
+      if (!collection?.rows.length) { $("dailyMatrixStatus").textContent="Collect at least one band before building the matrix."; return; }
+      if(!path1||!path2){$("dailyMatrixStatus").textContent="Select both destination cities.";return;}
+      if(path1.continent===path2.continent&&path1.name===path2.name&&path1.radiusKm===path2.radiusKm){$("dailyMatrixStatus").textContent="Select two different destination areas.";return;}
+      const dateStr=collection.dateStr;
+      try {
+        dailyMatrixSource = "wsprLive";
+        $("dailyMatrixDate").value = dateStr;
+        $("dailyReporter").value = collection.receiver;
+        buildDailyMatrixFromRows([WSPR_LIVE_HEADERS, ...collection.rows], collection.receiver, dateStr, path1, path2, {filenames:[`wspr.live ${dateStr}; ${collection.requests.length} band requests`],rawImportedRows:collection.rows.length,duplicateRows:0,rowLimitFiles:[]});
+      } catch(error) { $("dailyMatrixStatus").textContent=`Unable to build the collected-data matrix: ${error.message}`; console.warn(error); }
+    }
+
     async function buildDailyMatrix(){
       const dateStr=$("dailyMatrixDate").value,files=[...$("dailyWsprnetFile").files],path1=selectedDailyDestination(1),path2=selectedDailyDestination(2);
       if(!isValidIsoDate(dateStr)){ $("dailyMatrixStatus").textContent="Enter the date as YYYY-MM-DD.";return;}
@@ -3138,8 +3302,8 @@ FORMAT JSONCompact`.trim();
         const merged=mergeWsprFileRows(fileResults);
         const reporter=reporterFromWsprRows(merged.rows);
         $("dailyReporter").value=reporter;
-        const result=importedReporterMatrix(merged.rows,reporter,dateStr,path1,path2,dailyMatrixCountMode);
-        dailyMatrixLastReport={dateStr,reporter,path1,path2,countMode:dailyMatrixCountMode,filenames:files.map(file=>file.name),rawImportedRows:merged.importedRows,duplicateRows:merged.duplicateRows,rowLimitFiles:merged.rowLimitFiles,...result};renderDailyMatrix(dailyMatrixLastReport);
+        dailyMatrixSource = "files";
+        buildDailyMatrixFromRows(merged.rows,reporter,dateStr,path1,path2,{filenames:files.map(file=>file.name),rawImportedRows:merged.importedRows,duplicateRows:merged.duplicateRows,rowLimitFiles:merged.rowLimitFiles});
       }catch(error){$("dailyMatrixStatus").textContent=`Unable to build the reporter matrix: ${error.message}`;console.warn(error);}
     }
 
@@ -3149,7 +3313,8 @@ FORMAT JSONCompact`.trim();
         button.textContent = `Counting: ${DAILY_MATRIX_COUNT_LABELS[dailyMatrixCountMode]}`;
         button.setAttribute("aria-pressed", dailyMatrixCountMode==="raw"?"false":"true");
       });
-      if ($("dailyWsprnetFile").files.length) buildDailyMatrix();
+      if (dailyMatrixSource === "wsprLive") buildCollectedWsprMatrix();
+      else if ($("dailyWsprnetFile").files.length) buildDailyMatrix();
     }
 
     function dailyExportRows(report){const descriptions={raw:"Raw spots - every imported report row counted",unique:"Unique beacons per bin - each callsign counted once per 30-minute, band, and destination cell",cumulative:"Cumulative unique beacons - each callsign counted once across the UTC day, with running totals shown by time bin"};const globalSummaryLabel=report.countMode==="cumulative"?"Final unique":"Bin sum";const globalSummaryTotals=report.countMode==="cumulative"?dailyFinalTotals(report.globalMatrix):dailyTotals(report.globalMatrix);const periodLabel=report.countMode==="raw"?"Period raw":"Period unique";const periodTotals=report.countMode==="raw"?dailyTotals(report.globalMatrix):report.globalPeriodUniqueTotals;const rows=[["Report","Two-Path Single Reporter Daily WSPR Matrix"],["Reporter",report.reporter],["Date UTC",report.dateStr],["Counting mode",descriptions[report.countMode]||report.countMode],["Path 1",`${report.reporter} <> ${report.path1.continent}; ${report.path1.name} centred; ${report.path1.radiusKm} km radius`],["Path 2",`${report.reporter} <> ${report.path2.continent}; ${report.path2.name} centred; ${report.path2.radiusKm} km radius`],["Source files",report.filenames.join(" | ")],["Bands present in destination areas",report.bandsPresent.join(", ")],["Raw imported rows",report.rawImportedRows],["Exact duplicate imported rows removed",report.duplicateRows],["Distinct imported rows",report.importedRows],["Reporter/date source rows",report.sourceRows],["Destination-matching counts",report.matchingRows],["WSPRnet row-limit caution",report.rowLimitFiles.length?`${report.rowLimitFiles.length} source file(s) reached 10,000 rows and may be truncated`:"No source file reached 10,000 rows"],["Observed source time span UTC",report.sourceRows?`${report.earliestUtc}-${report.latestUtc}`:"none"],["Observed span minutes",report.observedSpanMinutes],["Bins containing destination spots",`${report.activeSlots} of 48`],["Coverage caution",report.observedSpanMinutes<1380?"Limited observed time span: blank bins may be outside the WSPRnet query period":"Observed source spots span most of the UTC day"],["UTC",...DAILY_MATRIX_BANDS.map(x=>`Path 1 ${x.label}`),...DAILY_MATRIX_BANDS.map(x=>`Path 2 ${x.label}`)]];for(let slot=0;slot<48;slot++)rows.push([dailySlotLabel(slot),...DAILY_MATRIX_BANDS.map(x=>report.matrix1[slot].get(x.band)||""),...DAILY_MATRIX_BANDS.map(x=>report.matrix2[slot].get(x.band)||"")]);rows.push([dailySummaryLabel(report.countMode),...dailySummaryTotals(report.matrix1,report.countMode),...dailySummaryTotals(report.matrix2,report.countMode)],[],["All Destinations Reporter Activity"],["UTC",...DAILY_MATRIX_BANDS.map(x=>x.label)]);for(let slot=0;slot<48;slot++)rows.push([dailySlotLabel(slot),...DAILY_MATRIX_BANDS.map(x=>report.globalMatrix[slot].get(x.band)||"")]);rows.push([globalSummaryLabel,...globalSummaryTotals],[periodLabel,...periodTotals]);return rows;}
@@ -4819,6 +4984,7 @@ FORMAT JSONCompact`.trim();
 
     renderWsprActivityPlaceholders("Waiting for refresh");
     $("dailyMatrixDate").value = new Date().toISOString().slice(0, 10);
+    renderWsprLiveCollector();
     initDailyDestinationSelectors();
     $("dailyCont1").addEventListener("change",()=>populateDailyDestinationCities(1));
     $("dailyCont2").addEventListener("change",()=>populateDailyDestinationCities(2));
@@ -4827,6 +4993,14 @@ FORMAT JSONCompact`.trim();
     $("dailyCountModeToggle").addEventListener("click", toggleDailyCountMode);
     $("dailyGlobalCountModeToggle").addEventListener("click", toggleDailyCountMode);
     $("dailyWsprnetFile").addEventListener("change", detectDailyReporter);
+    $("wsprLiveReceiver").addEventListener("input", renderWsprLiveCollector);
+    $("wsprLiveBandButtons").addEventListener("click", event => {
+      const button = event.target.closest("button[data-wspr-live-band]");
+      if (button) collectWsprLiveBand(Number(button.dataset.wsprLiveBand));
+    });
+    $("buildCollectedWsprMatrix").addEventListener("click", buildCollectedWsprMatrix);
+    $("saveCollectedWsprJson").addEventListener("click", saveCollectedWsprJson);
+    $("clearCollectedWspr").addEventListener("click", clearWsprLiveCollection);
     $("exportDailyMatrixCsv").addEventListener("click", exportDailyMatrixCsv);
     $("printDailyMatrix").addEventListener("click", printDailyMatrix);
     $("pathContA").addEventListener("change", () => populatePathCities("A"));
