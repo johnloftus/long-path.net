@@ -71,7 +71,21 @@ Automatic collection is explicitly started by the user with **Start Automatic Da
 - The final `23:30–00:00` bin is collected shortly after midnight, then automatic collection stops without starting a new UTC day.
 - The active collection is stored in browser IndexedDB so its collected data survives a page reload. Automatic downloading does not resume after reload; starting it again is always a user action.
 
-The status line reports the active UTC date, completed requests, collected bins, and any failed request. Failed bin-band requests remain recorded as missing rather than silently becoming zero counts.
+The status line reports the active UTC date, completed requests, collected bins, and any failed request. Automatic collection retries a failed request once after 30 seconds. A request that still fails remains recorded as missing rather than silently becoming a zero count.
+
+Open **Request diagnostics** to see each unresolved request's band, UTC bin, attempt count, and returned error. The same information is retained in IndexedDB and in **Save Collected JSON**. Use **Retry Missing Requests** for an explicit, user-initiated retry of unresolved band-bins.
+
+## Current-day live collection
+
+**Start Current-Day Live Collection** progressively acquires the current UTC day from the next scheduled `:03` or `:33` UTC set. It begins with the preceding completed bin and continues with consecutive completed bins until the UTC date changes.
+
+This mode is deliberately incomplete until the day ends. In a matrix built from collected live data:
+
+- `—` means the band-bin is pending collection.
+- `0` means that band-bin was collected and contained no matching spots.
+- `!` means the band-bin request failed and requires later attention.
+
+The status line reports the number of fully acquired bins out of 48. A current-day collection cannot backfill bins that were not collected before it was started; use saved WSPRnet data for historical coverage.
 
 ## Counting modes
 
