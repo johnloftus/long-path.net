@@ -1,0 +1,88 @@
+Daily WSPR Path Matrix - Trial Fair-Use Version 1.0
+
+USER GUIDE
+
+Steps to get started
+------------------------
+
+1. Read the README.md file for a description of the Daily WSPR Path Matrix App.
+
+2. Start index.html - opens the app in the local browser.
+
+3. Enter Receiver callsign - e.g. VK4EMM
+
+4. Set date UTC in format yyyy-mm-dd
+
+5. Select "Path 1 Destination": Continent, City, Radius. (Defaults: Europe, Frankfurt, 1,800 km)
+
+6. Select "Path 2 Destination": Continent, City, Radius. (Defaults: North America, Denver, 1,800 km) km)
+
+
+Steps for automatic "Current Day Live Collection" from wspr.live
+----------------------------------------------------------------
+
+1. Complete "steps to get started" - as above
+
+2. Press button "Start Current Day Live Collection"
+
+3. Allow to run for a full day (The live collection will stop at end of day).
+   OR
+3. Press button "Stop Automatic Collection"
+
+4. Press button "Save Collected JSON"
+
+5. Choose a folder to save file. (Default folder is "Downloads").
+   For your choice of folder, configure your browser settings.
+   e.g. chrome://settings/
+
+
+Steps for manual single band collection from wspr.live
+------------------------------------------------------
+
+1. Complete "steps to get started"
+
+2. Press band buttons to populate the current row (allow for forced 5 second countdown between bands)
+
+3. Press button "Save Collected JSON"
+
+3. Press button "Build Matrix from Collected Data"
+
+
+Manual download from wsprnet
+--------------------------------------
+
+Manual downloads from wsprnet are useful for bulk access to historical data.
+
+Steps
+
+1. Complete "steps to get started"
+
+2. Press button "Open WSPRnet Query" (Opens Database at "https://www.wsprnet.org/drupal/wsprnet/spotquery"). You may need to log in to get started.
+
+3. Edit settings
+   Band (All)
+   Mode (All)
+   Count (enter number of expected spots - max 10,000)
+   If more than 10,000 spots are expected, then set Band to a single band at a time
+   Reporter (Callsign)
+   Tick Reverse
+   Keep blank Unique
+   Tick Exclude Special Callsigns.
+   Push button "Update"
+   The browser will open a table of data
+
+4. Collect data from the browser table and save into a JSON file.
+
+	Suggestion: use a browser extension to copy and save the table.
+	Recommended extension: "Table Extractor 1.0"
+	Exports all table content on a webpage to json or csv in a single click.
+	Select the JSON option to save the file to your default folder.
+	The app reads and saves JSON files.
+
+5. Press button "Choose files"
+
+6. Select the file from chosen folder, or select all single band files, to be loaded.
+
+7. Press button "Build Two-Path Matrix"
+
+A method of automating downloads from wsprnet remains work in progress.

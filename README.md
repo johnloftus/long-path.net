@@ -46,8 +46,8 @@ When comparing against another service, use the same exact half-hour UTC interva
 2. At WSPRnet, query one receiver/reporter callsign.
 3. Leave **Unique** unchecked so the exported result retains individual timestamps.
 4. Save one or more JSON, CSV, or HTML result files.
-5. Select the files in **Saved WSPRnet results files**.
-6. Confirm the detected reporter and date, then select **Build Two-Path Matrix**.
+5. Select the files in **Import saved WSPRnet data**.
+6. Confirm the detected reporter and date, then select **Build Matrix from WSPRnet Data**.
 
 Overlapping source files are safe: exact duplicate rows are removed before counting.
 
@@ -57,27 +57,34 @@ Overlapping source files are safe: exact duplicate rows are removed before count
 2. Press a band button.
 3. The application queries the latest fully completed 30-minute UTC bin, never a partial current bin.
 4. Wait for the shared five-second cooldown before requesting another band.
-5. Use **Build Matrix from Collected Data** at any time.
+5. Use **Build Matrix from wspr.live Data** at any time.
 
 The same band becomes available again after the next completed bin. Rows are appended to the active UTC-day collection; completed bin-band pairs are not requested twice.
 
 ## Use with wspr.live — automatic full-day collection
 
-Automatic collection is explicitly started by the user with **Start Automatic Day Collection**.
+Automatic full-day collection is explicitly started by the user with **Schedule Next Full UTC-Day**.
 
-- A new full-day collection begins at `00:33 UTC`, when the first target bin (`00:00–00:30`) is complete and has a three-minute availability margin.
+- A new full-day collection begins after `00:33 UTC`, when the first target bin (`00:00–00:30`) is complete and has a three-minute availability margin.
 - The nine bands are requested one at a time, three minutes apart.
-- Subsequent sets begin at `:03` and `:33` UTC, always querying the immediately preceding completed bin.
+- In the trial build, each browser adds a random 20–120 second offset after that three-minute margin. Subsequent sets retain that same offset, so browsers do not all begin together.
+- The band order rotates between bins, further reducing simultaneous requests for the same band across trial users.
 - The final `23:30–00:00` bin is collected shortly after midnight, then automatic collection stops without starting a new UTC day.
 - The active collection is stored in browser IndexedDB so its collected data survives a page reload. Automatic downloading does not resume after reload; starting it again is always a user action.
 
-The status line reports the active UTC date, completed requests, collected bins, and any failed request. Automatic collection retries a failed request once after 30 seconds. A request that still fails remains recorded as missing rather than silently becoming a zero count.
+The status line reports the active UTC date, completed requests, collected bins, and any failed request. In the trial build, automatic collection retries a failed request once after a random 30–90 second delay. Three consecutive failed automatic requests pause collection for user review. A request that still fails remains recorded as missing rather than silently becoming a zero count.
 
 Open **Request diagnostics** to see each unresolved request's band, UTC bin, attempt count, and returned error. The same information is retained in IndexedDB and in **Save Collected JSON**. Use **Retry Missing Requests** for an explicit, user-initiated retry of unresolved band-bins.
 
+## Trial fairness mode
+
+The trial build disables the seven-day continuous archive. This avoids unattended multi-day collection while operators are evaluating the application. Automatic collection remains user-started, staggered between browsers, constrained to one completed bin and one band per request, and stopped after the UTC day.
+
+The browser tab must remain open for scheduled collection. Reloading restores the active collected data but does not silently resume automatic downloading.
+
 ## Current-day live collection
 
-**Start Current-Day Live Collection** progressively acquires the current UTC day from the next scheduled `:03` or `:33` UTC set. It begins with the preceding completed bin and continues with consecutive completed bins until the UTC date changes.
+**Start Current-Day Live Collection** progressively acquires the current UTC day from the next staggered scheduled set. It begins with the preceding completed bin and continues with consecutive completed bins until the UTC date changes.
 
 This mode is deliberately incomplete until the day ends. In a matrix built from collected live data:
 
