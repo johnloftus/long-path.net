@@ -54,12 +54,13 @@ Overlapping source files are safe: exact duplicate rows are removed before count
 ## Use with wspr.live — manual collection
 
 1. Enter the receiver callsign, for example `VK4EMM`.
-2. Press a band button.
-3. The application queries the latest fully completed 30-minute UTC bin, never a partial current bin.
-4. Wait for the shared five-second cooldown before requesting another band.
-5. Use **Build Matrix from wspr.live Data** at any time.
+2. Choose a live data server. **Auto balanced** randomly selects one provider when the collection starts; `wspr.live`, WsprDaemon WD1, and WsprDaemon WD2 can also be selected directly.
+3. Press a band button.
+4. The application queries the latest fully completed 30-minute UTC bin, never a partial current bin.
+5. Wait for the shared five-second cooldown before requesting another band.
+6. Use **Build Matrix from wspr.live Data** at any time.
 
-The same band becomes available again after the next completed bin. Rows are appended to the active UTC-day collection; completed bin-band pairs are not requested twice.
+The selected provider remains the collection's active server. If a request fails, the next automatic attempt uses a different provider; a successful fallback becomes the active server for subsequent requests. The same band becomes available again after the next completed bin. Rows are appended to the active UTC-day collection; completed bin-band pairs are not requested twice.
 
 ## Use with wspr.live — automatic full-day collection
 
@@ -69,12 +70,13 @@ Automatic full-day collection is explicitly started by the user with **Schedule 
 - The nine bands are requested one at a time, three minutes apart.
 - In the trial build, each browser adds a random 20–120 second offset after that three-minute margin. Subsequent sets retain that same offset, so browsers do not all begin together.
 - The band order rotates between bins, further reducing simultaneous requests for the same band across trial users.
+- **Auto balanced** selects one of wspr.live, WsprDaemon WD1, or WsprDaemon WD2 when the collection begins. It does not rotate providers per band; a provider changes only after a failed request and successful fallback.
 - The final `23:30–00:00` bin is collected shortly after midnight, then automatic collection stops without starting a new UTC day.
 - The active collection is stored in browser IndexedDB so its collected data survives a page reload. Automatic downloading does not resume after reload; starting it again is always a user action.
 
 The status line reports the active UTC date, completed requests, collected bins, and any failed request. In the trial build, automatic collection retries a failed request once after a random 30–90 second delay. Three consecutive failed automatic requests pause collection for user review. A request that still fails remains recorded as missing rather than silently becoming a zero count.
 
-Open **Request diagnostics** to see each unresolved request's band, UTC bin, attempt count, and returned error. The same information is retained in IndexedDB and in **Save Collected JSON**. Use **Retry Missing Requests** for an explicit, user-initiated retry of unresolved band-bins.
+Open **Request diagnostics** to see each unresolved request's band, UTC bin, provider attempt history, attempt count, and returned error. The provider selection, endpoint, failover history, and per-request provider attempts are retained in IndexedDB and in **Save Collected JSON**. Use **Retry Missing Requests** for an explicit, user-initiated retry of unresolved band-bins.
 
 ## Trial fairness mode
 
@@ -115,7 +117,7 @@ The collected JSON is the audit record for checking a result against another WSP
 ## Data-source and interpretation notes
 
 - wspr.live requests use UTC query bounds and UTC timestamps.
-- The wspr.live collector fetches only one exact receiver callsign, one band, and one completed 30-minute bin per request.
+- The live-data collector fetches only one exact receiver callsign, one band, and one completed 30-minute bin per request. Its compatible providers are wspr.live, WsprDaemon WD1, and WsprDaemon WD2.
 - A missing cell is not proof that propagation was impossible; it means no matching source row was counted for that cell and data set.
 - A destination radius is applied to the transmitter grid, not to the reporter. The reporter is selected by exact callsign.
 - Do not compare a single-reporter matrix count with an area-to-area activity report unless their receiver filter, transmitter-area definition, raw/unique mode, and UTC interval are identical.

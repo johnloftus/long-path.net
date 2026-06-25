@@ -31,6 +31,7 @@
         <h3>3. wspr.live Data Collection</h3>
         <p class="note">Manual requests use the latest completed 30-minute UTC bin with a shared 5-second cooldown. Automatic day collection is user-started: it acquires the nine bands every three minutes for the preceding completed bin, retains consecutive bins, and stops after the UTC day. Trial fairness mode staggers each browser's automatic requests.</p>
         <div class="wspr-live-collector-controls">
+          <div><label for="wsprLiveProvider">Live data server</label><select id="wsprLiveProvider"><option value="auto">Auto balanced — choose once per collection</option><option value="wsprLive">wspr.live</option><option value="wd1">WsprDaemon WD1</option><option value="wd2">WsprDaemon WD2</option></select></div>
           <div class="wspr-live-band-buttons" id="wsprLiveBandButtons"></div>
         </div>
         <div class="daily-matrix-toolbar">
@@ -117,6 +118,11 @@
     const WSPR_LIVE_DB_STORE = "collections";
     const WSPR_LIVE_ARCHIVE_DAYS = 7;
     const WSPR_LIVE_HEADERS = ["Reporter", "Date", "Band", "Grid", "Call"];
+    const WSPR_LIVE_PROVIDERS = [
+      {id:"wsprLive", label:"wspr.live", endpoint:"https://db1.wspr.live/"},
+      {id:"wd1", label:"WsprDaemon WD1", endpoint:"https://wd1.wsprdaemon.org/"},
+      {id:"wd2", label:"WsprDaemon WD2", endpoint:"https://wd2.wsprdaemon.org/"}
+    ];
     let wsprLiveCollection = null, wsprLiveCooldownUntil = 0, wsprLiveRequestInFlight = false, wsprLiveCooldownTimer = null, wsprAutoTimer = null, wsprAutoRunning = false, wsprAutoNextRunAt = 0, wsprAutoMode = null, wsprAutoJitterMs = 0, wsprAutoConsecutiveFailures = 0;
     let dailyMatrixLastReport = null, dailyMatrixSource = null, dailyMatrixCountMode = "raw";
     const DAILY_MATRIX_COUNT_MODES = ["raw", "unique", "cumulative"];
@@ -2351,6 +2357,8 @@
         db.close();
         if (collection?.receiver && Array.isArray(collection.rows) && Array.isArray(collection.requests)) {
           wsprLiveCollection = collection;
+          activeWsprLiveProvider();
+          $("wsprLiveProvider").value = collection.providerChoice || "wsprLive";
           $("wsprLiveReceiver").value = collection.receiver;
           $("wsprLiveReceiver").readOnly = true;
           $("dailyReporter").value = collection.receiver;
@@ -2391,12 +2399,55 @@
         const collection = await new Promise((resolve, reject) => { const request=db.transaction(WSPR_LIVE_DB_STORE).objectStore(WSPR_LIVE_DB_STORE).get(`archive:${dateStr}`); request.onsuccess=()=>resolve(request.result); request.onerror=()=>reject(request.error); });
         db.close();
         if (!collection) throw new Error("Archived day was not found.");
-        downloadText(`wspr_live_${collection.receiver}_${collection.dateStr}_UTC.json`, JSON.stringify({headers:WSPR_LIVE_HEADERS, rows:collection.rows, source:"wspr.live", receiver:collection.receiver, dateUtc:collection.dateStr, requests:collection.requests, archivedAt:collection.archivedAt}, null, 2), "application/json;charset=utf-8");
+        downloadText(`wspr_live_${collection.receiver}_${collection.dateStr}_UTC.json`, JSON.stringify({headers:WSPR_LIVE_HEADERS, rows:collection.rows, source:"live WSPR provider collection", receiver:collection.receiver, dateUtc:collection.dateStr, providerChoice:collection.providerChoice, activeProviderId:collection.activeProviderId, providerHistory:collection.providerHistory, requests:collection.requests, archivedAt:collection.archivedAt}, null, 2), "application/json;charset=utf-8");
       } catch (error) { $("wsprLiveStatus").textContent = `Unable to export archived day: ${error.message}`; }
     }
 
     function waitFor(milliseconds) { return new Promise(resolve => setTimeout(resolve, Math.max(0, milliseconds))); }
     function randomInteger(minimum, maximum) { return minimum + Math.floor(Math.random() * (maximum - minimum + 1)); }
+
+    function wsprLiveProviderById(providerId) {
+      return WSPR_LIVE_PROVIDERS.find(provider => provider.id === providerId) || WSPR_LIVE_PROVIDERS[0];
+    }
+
+    function selectedWsprLiveProvider() {
+      const choice = $("wsprLiveProvider").value;
+      return choice === "auto" ? WSPR_LIVE_PROVIDERS[randomInteger(0, WSPR_LIVE_PROVIDERS.length - 1)] : wsprLiveProviderById(choice);
+    }
+
+    function initialiseWsprLiveCollection(receiver, dateStr) {
+      if (wsprLiveCollection) return wsprLiveCollection;
+      const provider = selectedWsprLiveProvider();
+      wsprLiveCollection = {
+        receiver, dateStr, requests: [], rows: [],
+        providerChoice: $("wsprLiveProvider").value,
+        activeProviderId: provider.id,
+        providerHistory: [{providerId:provider.id, providerLabel:provider.label, endpoint:provider.endpoint, selectedAt:new Date().toISOString(), reason:"collection start"}]
+      };
+      return wsprLiveCollection;
+    }
+
+    function activeWsprLiveProvider() {
+      if (!wsprLiveCollection) return selectedWsprLiveProvider();
+      if (!wsprLiveCollection.activeProviderId) {
+        wsprLiveCollection.activeProviderId = "wsprLive";
+        wsprLiveCollection.providerChoice ||= "wsprLive";
+        wsprLiveCollection.providerHistory ||= [{providerId:"wsprLive", providerLabel:"wspr.live", endpoint:wsprLiveProviderById("wsprLive").endpoint, selectedAt:new Date().toISOString(), reason:"legacy collection"}];
+      }
+      return wsprLiveProviderById(wsprLiveCollection.activeProviderId);
+    }
+
+    function fallbackWsprLiveProvider(providerId) {
+      const alternatives = WSPR_LIVE_PROVIDERS.filter(provider => provider.id !== providerId);
+      return alternatives[randomInteger(0, alternatives.length - 1)];
+    }
+
+    function switchWsprLiveProvider(provider, reason) {
+      if (!wsprLiveCollection || wsprLiveCollection.activeProviderId === provider.id) return;
+      wsprLiveCollection.activeProviderId = provider.id;
+      wsprLiveCollection.providerHistory ||= [];
+      wsprLiveCollection.providerHistory.push({providerId:provider.id, providerLabel:provider.label, endpoint:provider.endpoint, selectedAt:new Date().toISOString(), reason});
+    }
 
     function prepareAutomaticWsprFairness() {
       wsprAutoJitterMs = WSPR_TRIAL_FAIRNESS_MODE ? randomInteger(WSPR_AUTO_JITTER_MIN_MS, WSPR_AUTO_JITTER_MAX_MS) : 0;
@@ -2474,7 +2525,7 @@
       const receiver = $("wsprLiveReceiver").value.trim().toUpperCase();
       if (!wsprLiveCollection && !/^[A-Z0-9/]{1,20}$/.test(receiver)) { $("wsprLiveStatus").textContent = "Enter a valid receiver callsign before starting current-day collection."; return; }
       if (!wsprLiveCollection) {
-        wsprLiveCollection = {receiver, dateStr:new Date().toISOString().slice(0,10), requests:[], rows:[]};
+        initialiseWsprLiveCollection(receiver, new Date().toISOString().slice(0,10));
         $("wsprLiveReceiver").value = receiver;
         $("wsprLiveReceiver").readOnly = true;
         $("dailyReporter").value = receiver;
@@ -2527,11 +2578,12 @@
       const locked = Boolean(wsprLiveCollection);
       const nextDay = locked && targetBin.start.toISOString().slice(0, 10) !== wsprLiveCollection.dateStr;
       const canRequest = !wsprLiveRequestInFlight && !cooldownRemaining && !nextDay && (!locked ? Boolean(receiver) : true);
+      $("wsprLiveProvider").disabled = locked;
       const collectedBands = new Set((wsprLiveCollection?.requests || []).filter(request => request.binStart === targetKey).map(request => request.band));
       $("wsprLiveBandButtons").innerHTML = DAILY_MATRIX_BANDS.map(item => {
         const collected = collectedBands.has(item.band);
         const disabled = !canRequest || collected;
-        return `<button class="secondary" type="button" data-wspr-live-band="${item.band}" title="${collected ? "Already collected for this UTC bin." : "Request this band from wspr.live."}" ${disabled ? "disabled" : ""}>${item.label}${collected ? " ✓" : ""}</button>`;
+        return `<button class="secondary" type="button" data-wspr-live-band="${item.band}" title="${collected ? "Already collected for this UTC bin." : "Request this band from the selected live-data server."}" ${disabled ? "disabled" : ""}>${item.label}${collected ? " ✓" : ""}</button>`;
       }).join("");
       $("buildCollectedWsprMatrix").disabled = !(wsprLiveCollection?.rows.length);
       $("saveCollectedWsprJson").disabled = !(wsprLiveCollection?.rows.length);
@@ -2545,17 +2597,18 @@
       $("wsprLiveDiagnostics").innerHTML = !wsprLiveCollection
         ? "No collection started."
         : failedRequests.length
-          ? `<strong>${failedRequests.length}</strong> missing request${failedRequests.length === 1 ? "" : "s"}.<ul>${failedRequests.slice(-12).map(request => `<li>${esc(DAILY_MATRIX_BANDS.find(item => item.band === request.band)?.label || request.band)} | ${esc(String(request.binStart || "").slice(0, 16).replace("T", " "))} UTC | attempts ${request.attempts || 1} | ${esc(request.error || "Unknown error")}</li>`).join("")}</ul>`
+          ? `<strong>${failedRequests.length}</strong> missing request${failedRequests.length === 1 ? "" : "s"}.<ul>${failedRequests.slice(-12).map(request => `<li>${esc(DAILY_MATRIX_BANDS.find(item => item.band === request.band)?.label || request.band)} | ${esc(String(request.binStart || "").slice(0, 16).replace("T", " "))} UTC | ${esc(request.providerAttempts?.map(attempt => `${attempt.providerLabel}: ${attempt.outcome}`).join(" → ") || request.providerLabel || "provider not recorded")} | attempts ${request.attempts || 1} | ${esc(request.error || "Unknown error")}</li>`).join("")}</ul>`
           : "No failed requests recorded.";
       if (wsprLiveRequestInFlight) return;
       if (wsprLiveCollection) {
+        const provider = activeWsprLiveProvider();
         const autoLabel = wsprAutoMode === "archive" ? "7-day continuous archive" : wsprAutoMode === "current" ? "Current-day" : "Full-day";
         const nextRun = wsprAutoRunning ? ` ${autoLabel} automatic collection active; next set begins ${new Date(wsprAutoNextRunAt).toISOString().slice(11, 16)} UTC.` : "";
         const state = cooldownRemaining ? ` Next request available in ${Math.ceil(cooldownRemaining / 1000)} seconds.` : " Select another uncollected band or build the matrix.";
         const outcome = wsprLiveCollection.lastOutcome ? ` Last request: ${wsprLiveCollection.lastOutcome}.` : "";
         const binCount = new Set(wsprLiveCollection.requests.map(request => request.binStart)).size;
         const dayLimit = nextDay ? " The UTC day is complete; use Clear Collection before starting the next day." : "";
-        $("wsprLiveStatus").textContent = `Collection: ${wsprLiveCollection.receiver} | UTC date ${wsprLiveCollection.dateStr} | current bin ${wsprLiveBinLabel(targetBin)} | ${wsprLiveCollection.rows.length.toLocaleString()} spots from ${wsprLiveCollection.requests.length} band requests across ${binCount} bins; ${collectedBands.size} of ${DAILY_MATRIX_BANDS.length} bands collected in this bin.${outcome}${nextRun}${dayLimit}${nextDay ? "" : state}`;
+        $("wsprLiveStatus").textContent = `Collection: ${wsprLiveCollection.receiver} | server ${provider.label} | UTC date ${wsprLiveCollection.dateStr} | current bin ${wsprLiveBinLabel(targetBin)} | ${wsprLiveCollection.rows.length.toLocaleString()} spots from ${wsprLiveCollection.requests.length} band requests across ${binCount} bins; ${collectedBands.size} of ${DAILY_MATRIX_BANDS.length} bands collected in this bin.${outcome}${nextRun}${dayLimit}${nextDay ? "" : state}`;
       } else {
         $("wsprLiveStatus").textContent = wsprAutoRunning
           ? wsprAutoMode === "archive"
@@ -2594,14 +2647,16 @@
         return;
       }
       const targetBin = requestedBin || latestCompleteWsprBin();
-      if (!wsprLiveCollection) wsprLiveCollection = { receiver: enteredReceiver, dateStr:targetBin.start.toISOString().slice(0, 10), requests: [], rows: [] };
+      if (!wsprLiveCollection) initialiseWsprLiveCollection(enteredReceiver, targetBin.start.toISOString().slice(0, 10));
       if (targetBin.start.toISOString().slice(0, 10) !== wsprLiveCollection.dateStr) {
         $("wsprLiveStatus").textContent = "This collection is limited to one UTC day. Save it if required, then use Clear Collection before starting the next day.";
         return;
       }
       const existingRequestIndex = wsprLiveCollection.requests.findIndex(request => request.band === band && request.binStart === targetBin.start.toISOString());
+      let retryProviderId = null;
       if (existingRequestIndex >= 0) {
         if (!forceRetry || wsprLiveCollection.requests[existingRequestIndex].status !== "failed") return;
+        retryProviderId = wsprLiveCollection.requests[existingRequestIndex].nextProviderId || null;
         wsprLiveCollection.requests.splice(existingRequestIndex, 1);
       }
       wsprLiveRequestInFlight = true;
@@ -2611,19 +2666,24 @@
       renderWsprLiveCollector();
       const maxAttempts = automated ? 2 : 1;
       let lastError = null;
+      let provider = retryProviderId ? wsprLiveProviderById(retryProviderId) : activeWsprLiveProvider();
+      const providerAttempts = [];
       try {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           try {
-            const response = await fetch(`https://db1.wspr.live/?query=${encodeURIComponent(wsprLiveQuery(wsprLiveCollection.receiver, band, targetBin))}`, {method:"GET"});
+            const attemptedAt = new Date().toISOString();
+            const response = await fetch(`${provider.endpoint}?query=${encodeURIComponent(wsprLiveQuery(wsprLiveCollection.receiver, band, targetBin))}`, {method:"GET"});
             if (!response.ok) {
               const detail = (await response.text()).trim().replace(/\s+/g, " ").slice(0, 240);
               throw new Error(`HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
             }
             const rows = wsprLiveRows(await response.json());
+            providerAttempts.push({providerId:provider.id, providerLabel:provider.label, endpoint:provider.endpoint, attemptedAt, outcome:"success"});
             const existing = new Set(wsprLiveCollection.rows.map(row => JSON.stringify(row)));
             rows.forEach(row => { if (!existing.has(JSON.stringify(row))) wsprLiveCollection.rows.push(row); });
-            wsprLiveCollection.requests.push({band, binStart:targetBin.start.toISOString(), binEnd:targetBin.end.toISOString(), status:"success", attempts:attempt, attemptedAt:new Date().toISOString()});
-            wsprLiveCollection.lastOutcome = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} returned ${rows.length.toLocaleString()} spots${attempt > 1 ? ` after ${attempt} attempts` : ""}`;
+            if (provider.id !== activeWsprLiveProvider().id) switchWsprLiveProvider(provider, "successful failover after request failure");
+            wsprLiveCollection.requests.push({band, binStart:targetBin.start.toISOString(), binEnd:targetBin.end.toISOString(), status:"success", attempts:attempt, attemptedAt:new Date().toISOString(), providerId:provider.id, providerLabel:provider.label, providerEndpoint:provider.endpoint, providerAttempts});
+            wsprLiveCollection.lastOutcome = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} returned ${rows.length.toLocaleString()} spots from ${provider.label}${attempt > 1 ? ` after ${attempt} attempts` : ""}`;
             $("dailyReporter").value = wsprLiveCollection.receiver;
             $("dailyMatrixDate").value = wsprLiveCollection.dateStr;
             await persistWsprLiveCollection();
@@ -2631,16 +2691,19 @@
             return true;
           } catch (error) {
             lastError = error;
+            providerAttempts.push({providerId:provider.id, providerLabel:provider.label, endpoint:provider.endpoint, attemptedAt:new Date().toISOString(), outcome:"failed", error:error?.message || "Unknown request error"});
             if (attempt < maxAttempts) {
+              provider = fallbackWsprLiveProvider(provider.id);
               const retryDelay = automated ? randomInteger(WSPR_AUTO_RETRY_MIN_MS, WSPR_AUTO_RETRY_MAX_MS) : WSPR_AUTO_RETRY_MIN_MS;
-              $("wsprLiveStatus").textContent = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} request failed; retrying once in ${Math.ceil(retryDelay / 1000)} seconds.`;
+              $("wsprLiveStatus").textContent = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} request failed; retrying on ${provider.label} in ${Math.ceil(retryDelay / 1000)} seconds.`;
               await waitFor(retryDelay);
             }
           }
         }
         const errorText = lastError?.message || "Unknown request error";
-        wsprLiveCollection.lastOutcome = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} failed (${errorText})`;
-        wsprLiveCollection.requests.push({band, binStart:targetBin.start.toISOString(), binEnd:targetBin.end.toISOString(), status:"failed", attempts:maxAttempts, attemptedAt:new Date().toISOString(), error:errorText});
+        const nextProvider = WSPR_LIVE_PROVIDERS.find(candidate => !providerAttempts.some(record => record.providerId === candidate.id)) || fallbackWsprLiveProvider(provider.id);
+        wsprLiveCollection.lastOutcome = `${DAILY_MATRIX_BANDS.find(item=>item.band===band).label} failed on ${provider.label} (${errorText})`;
+        wsprLiveCollection.requests.push({band, binStart:targetBin.start.toISOString(), binEnd:targetBin.end.toISOString(), status:"failed", attempts:maxAttempts, attemptedAt:new Date().toISOString(), error:errorText, providerId:provider.id, providerLabel:provider.label, providerEndpoint:provider.endpoint, nextProviderId:nextProvider.id, providerAttempts});
         await persistWsprLiveCollection();
         if (automated) buildCollectedWsprMatrix();
         console.warn("wspr.live collection request failed", lastError);
@@ -2691,7 +2754,7 @@
       if (!wsprLiveCollection?.rows.length) return;
       const collection = wsprLiveCollection;
       const filename = `wspr_live_${collection.receiver}_${collection.dateStr}_UTC.json`;
-      const text = JSON.stringify({headers:WSPR_LIVE_HEADERS, rows:collection.rows, source:"wspr.live", receiver:collection.receiver, dateUtc:collection.dateStr, requests:collection.requests}, null, 2);
+      const text = JSON.stringify({headers:WSPR_LIVE_HEADERS, rows:collection.rows, source:"live WSPR provider collection", receiver:collection.receiver, dateUtc:collection.dateStr, providerChoice:collection.providerChoice, activeProviderId:collection.activeProviderId, providerHistory:collection.providerHistory, requests:collection.requests}, null, 2);
       downloadText(filename, text, "application/json;charset=utf-8");
       $("wsprLiveStatus").textContent = `Downloaded ${filename} using the browser's configured download folder.`;
     }
@@ -2726,7 +2789,8 @@
         dailyMatrixSource = "wsprLive";
         $("dailyMatrixDate").value = dateStr;
         $("dailyReporter").value = collection.receiver;
-        buildDailyMatrixFromRows([WSPR_LIVE_HEADERS, ...collection.rows], collection.receiver, dateStr, path1, path2, {filenames:[`wspr.live ${dateStr}; ${collection.requests.length} band requests`],rawImportedRows:collection.rows.length,duplicateRows:0,rowLimitFiles:[],collectionRequests:collection.requests,sourceLabel:"wspr.live collection"});
+        const providers = [...new Set(collection.requests.map(request => request.providerLabel).filter(Boolean))];
+        buildDailyMatrixFromRows([WSPR_LIVE_HEADERS, ...collection.rows], collection.receiver, dateStr, path1, path2, {filenames:[`Live WSPR ${dateStr}; ${collection.requests.length} band requests${providers.length ? `; ${providers.join(", ")}` : ""}`],rawImportedRows:collection.rows.length,duplicateRows:0,rowLimitFiles:[],collectionRequests:collection.requests,sourceLabel:"Live WSPR collection"});
       } catch(error) { $("dailyMatrixStatus").textContent=`Unable to build the collected-data matrix: ${error.message}`; console.warn(error); }
     }
 
@@ -2789,6 +2853,7 @@
       if (hasFiles) $("matrixSourceBadge").textContent = "WSPRnet files selected";
     });
     $("wsprLiveReceiver").addEventListener("input",renderWsprLiveCollector);
+    $("wsprLiveProvider").addEventListener("change",renderWsprLiveCollector);
     $("wsprLiveBandButtons").addEventListener("click",event=>{const button=event.target.closest("button[data-wspr-live-band]");if(button)collectWsprLiveBand(Number(button.dataset.wsprLiveBand));});
     $("startAutoWsprDay").addEventListener("click",startAutomaticWsprDay);
     $("startCurrentWsprDay").addEventListener("click",startCurrentDayWsprCollection);
